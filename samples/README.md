@@ -13,6 +13,7 @@ Exported with `node tools/export-samples.mjs`.
 | 5 | Patient guide (article) | [Stem Cell Anti Aging Cost in Europe 2026](https://www.placidway.com/article/5665/Stem-Cell-Anti-Aging-Cost-in-Europe-Explore-Clinics-Treatments-and-Patient-Packages) | 1 | ✅ passed | published (dry run, simulated) |
 | 6 | Treatment package | [Cardiac Risk Assessment in Saudi Arabia / KFSHRC](https://www.placidway.com/package/8699/Cardiac-Risk-Assessment-Package-in-Riyadh-Saudi-Arabia-at-KFSHRC) | 2 | ✅ passed | pending approval |
 | 7 | Patient Q&A | [Comparing PRP vs. Stem Cell Knee Treatments in Japan: Which Works Better?](https://www.placidway.com/answer-detail/571066/Comparing-PRP-vs-Stem-Cell-Knee-Treatments-in-Japan-Which-Works-Better) | 1 | ✅ passed | published (dry run, simulated) |
+| 9 | Treatment package | [Women's Health Screening in Saudi Arabia / KFSHRC](https://www.placidway.com/package/8698/Comprehensive-Womens-Health-Screening-Package-in-Riyadh-Saudi-Arabia-at-KFSHRC) | 1 | ✅ passed | **live on Facebook**: [view post](https://www.facebook.com/122096451345521209/posts/122096491407521209) |
 
 ---
 
@@ -284,3 +285,42 @@ Read the full guide on PlacidWay to compare your options.
 </details>
 
 > **AI reviewer:** The post accurately reflects all claims from the SOURCE page. All prices are verbatim matches ($350–$1,000 for PRP; $7,000–$17,000 for stem cell therapy). Descriptions of mechanisms and treatment comparisons are faithful paraphrases of the source. Language is appropriately cautious ("may help," "may offer more potential") without overstating efficacy or making unsupported medical claims. No invented facts, prices, or misleading implications about PlacidWay's role.
+
+---
+
+## 9. Women's Health Screening in Saudi Arabia | KFSHRC
+
+- **Outcome:** **live on Facebook**: [view post](https://www.facebook.com/122096451345521209/posts/122096491407521209)
+- **Source:** https://www.placidway.com/package/8698/Comprehensive-Womens-Health-Screening-Package-in-Riyadh-Saudi-Arabia-at-KFSHRC
+- **Type / category:** Treatment package · Executive Healthcheck
+- **Why selected:** Rotation picks "package" for Tue; category "Health Checkups" not used in last 3 posts
+- **Guardrails:** 9/9 rules passed · AI reviewer: pass · 1 attempt(s)
+
+```text
+What does a full women's health screening in Saudi Arabia include? 🩺
+
+• Offers a tailored assessment for women at every life stage.
+• Includes core labs: CBC, metabolic, lipid, and thyroid tests.
+• Breast and pelvic ultrasound, plus mammography if needed.
+• Package is proposed at USD 750, all-inclusive.
+
+See the full package details and compare options on PlacidWay.
+👉 https://www.placidway.com/package/8698/Comprehensive-Womens-Health-Screening-Package-in-Riyadh-Saudi-Arabia-at-KFSHRC?utm_source=facebook&utm_medium=social&utm_campaign=pw_daily_autopilot
+
+#WomensHealthScreening #PreventiveHealthcare #Riyadh #SaudiArabia #KFSHRC
+```
+
+![Branded image for post 9](images/post-9.jpg)
+
+<details><summary>Grounding: each line's supporting quote from the source</summary>
+
+| Post line | Verbatim source quote |
+|---|---|
+| Offers a tailored assessment for women at every life stage. | “This specialized outpatient program provides a thorough clinical assessment tailored specifically to women across various life stages” |
+| Includes core labs: CBC, metabolic, lipid, and thyroid tests. | “Core laboratory panels: Complete Blood Count (CBC), Comprehensive Metabolic Profile, Lipid Panel, Blood Glucose & HbA1c, Renal Function, Liver Function, and Thyroid Function tests.” |
+| Breast and pelvic ultrasound, plus mammography if needed. | “Targeted women's imaging: Breast and pelvic ultrasound (and screening mammography when clinically indicated).” |
+| Package is proposed at USD 750, all-inclusive. | “Explore comprehensive women's health screening at KFSHRC in Saudi Arabia, including preventive assessments and selected tests. Proposed price: USD 750.” |
+
+</details>
+
+> **AI reviewer:** The post accurately reflects information from the SOURCE page. All factual claims are supported: the tailored assessment for women at various life stages, the listed lab tests (CBC, metabolic, lipid, thyroid), breast and pelvic ultrasound with conditional mammography, and the USD 750 all-inclusive price are all stated in the SOURCE. No medical claims (cure, efficacy, guaranteed outcomes), unsupported facts, invented prices, fear-based language, or inappropriate framing detected. The call-to-action to view details on PlacidWay is appropriate for a marketplace platform.

@@ -48,7 +48,7 @@
           },
           "conditions": [
             {
-              "id": "ca96a05b-e418-4065-b87f-efca4d61611d",
+              "id": "b89ea5fa-eef0-40ab-bc09-83fe591fde24",
               "leftValue": "={{ $json.headers['x-pw-token'] === $env.PW_API_TOKEN && !!$env.PW_API_TOKEN }}",
               "rightValue": "",
               "operator": {
@@ -157,7 +157,7 @@
           },
           "conditions": [
             {
-              "id": "ca96a05b-e418-4065-b87f-efca4d61611d",
+              "id": "b89ea5fa-eef0-40ab-bc09-83fe591fde24",
               "leftValue": "={{ $json.headers['x-pw-token'] === $env.PW_API_TOKEN && !!$env.PW_API_TOKEN }}",
               "rightValue": "",
               "operator": {
@@ -276,7 +276,7 @@
           },
           "conditions": [
             {
-              "id": "e1224c99-48be-41e1-b024-23d95355375b",
+              "id": "a17a48e2-6f5f-478b-88f2-2f9fa54fb8fd",
               "leftValue": "={{ $json.ok }}",
               "rightValue": "",
               "operator": {

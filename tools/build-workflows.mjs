@@ -106,14 +106,14 @@ const bridgeHttp = (bodyExpr) => ({
   jsonBody: bodyExpr,
   options: { timeout: 240000 },
 });
-const getText = (urlExpr, batching) => ({
+const getText = (urlExpr, batching, timeout = 30000) => ({
   url: urlExpr,
   sendHeaders: true,
   headerParameters: { parameters: [{ name: 'User-Agent', value: '={{ $env.PW_USER_AGENT }}' }, { name: 'Accept', value: 'text/html,application/xml;q=0.9,*/*;q=0.8' }] },
   options: {
     ...(batching ? { batching: { batch: { batchSize: 1, batchInterval: 1100 } } } : {}),
     response: { response: { responseFormat: 'text', outputPropertyName: 'data' } },
-    timeout: 30000,
+    timeout,
   },
 });
 const graphToken = { name: 'access_token', value: '={{ $env.FB_PAGE_ACCESS_TOKEN }}' };
@@ -158,11 +158,19 @@ const pipeline = wf('pipeline', 'PW · 1 · Daily Post Pipeline', (w) => {
           FROM (SELECT category, content_type FROM posts WHERE status NOT IN ('failed','rejected','drafting')
                 ORDER BY created_at DESC LIMIT 10) r) AS recent`), pgNode());
   w.node('Log Run Start', 'n8n-nodes-base.postgres', 2.6, [680, Y], pg(
-    `INSERT INTO runs (run_id, workflow, trigger, mode, dry_run, status)
+    `WITH stale AS (
+       -- n8n skips error workflows for editor-started runs; close anything abandoned and release its URL.
+       UPDATE runs SET status = 'error', error = 'abandoned: no completion recorded', finished_at = now()
+       WHERE status = 'running' AND started_at < now() - interval '15 minutes' RETURNING run_id
+     ), released AS (
+       UPDATE posts SET status = 'failed', error = 'run abandoned', updated_at = now()
+       WHERE status = 'drafting' AND updated_at < now() - interval '15 minutes' RETURNING id
+     )
+     INSERT INTO runs (run_id, workflow, trigger, mode, dry_run, status)
      VALUES ($1, 'pipeline', $2, $3, $4::boolean, 'running') RETURNING id`,
     "={{ [ $('Start Run').first().json.run.run_id, $('Start Run').first().json.run.trigger, $json.settings.publish_mode, $json.settings.dry_run ] }}"), pgNode());
   w.node('Sitemap Targets', 'n8n-nodes-base.code', 2, [900, Y], code('sitemap-targets.js'));
-  w.node('Fetch Sitemaps', 'n8n-nodes-base.httpRequest', 4.2, [1120, Y], getText('={{ $json.target.url }}', true), retry(3, 5000));
+  w.node('Fetch Sitemaps', 'n8n-nodes-base.httpRequest', 4.2, [1120, Y], getText('={{ $json.target.url }}', true, 60000), { ...retry(3, 5000), onError: 'continueRegularOutput' });
   w.node('Pick Candidate', 'n8n-nodes-base.code', 2, [1340, Y], code('pick-candidate.js'));
   w.node('Found Item?', 'n8n-nodes-base.if', 2.2, [1560, Y], boolIf('={{ $json.found }}'));
   w.node('Nothing To Post', 'n8n-nodes-base.postgres', 2.6, [1780, Y + 300], pg(

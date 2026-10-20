@@ -1,0 +1,27 @@
+{
+ "lines": [
+  "\u2714 pick-candidate: follows weekday rotation and skips used URLs",
+  "\u2714 pick-candidate: avoids recently used categories and falls back across types",
+  "\u2714 pick-candidate: one failed sitemap is skipped, the others still feed selection",
+  "\u2714 pick-candidate: throws when every sitemap is empty",
+  "\u2714 extract: article via JSON-LD articleBody, breadcrumb category, OG image",
+  "\u2714 extract: package captures listed price from Product offers",
+  "\u2714 extract: Q&A page via BlogPosting",
+  "\u2714 guardrails: a grounded, compliant post passes every rule",
+  "\u2714 guardrails: blocks medical claims",
+  "\u2714 guardrails: cautionary negations are allowed, promises are not",
+  "\u2714 guardrails: blocks numbers and prices not in the source",
+  "\u2714 guardrails: allows a price that is in the source",
+  "\u2714 guardrails: flags quotes that are not in the source",
+  "\u2714 guardrails: structure, hashtag count and length limits",
+  "\u2714 guardrails: unsupported superlatives",
+  "\u2714 verdict: retries with feedback, then escalates to human review",
+  "\u2714 verdict: reviewer outage fails closed to human review",
+  "\u2714 verdict: clean pass in auto mode is approved for publishing",
+  "\u2714 approval: human edits are re-checked against hard rules",
+  "\u2714 publish prepare: schedules HH:MM to the next valid slot",
+  "\u2714 publish prepare: refuses anything not approved",
+  "\u2714 classify FB error: expired token becomes an actionable alert"
+ ],
+ "pass": 22
+}

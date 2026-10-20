@@ -17,7 +17,8 @@ function decode(s) {
 }
 function strip(s) {
   return decode(String(s || '')
-    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>|<style[\s\S]*?<\/style>|<noscript[\s\S]*?<\/noscript>|<!--[\s\S]*?-->/gi, ' ')
+    .replace(/<!--|-->/g, ' ')
     .replace(/<\/(p|li|h[1-6]|div|tr|br)>/gi, '\n').replace(/<br\s*\/?>/gi, '\n')
     .replace(/<[^>]+>/g, ' '))
     .replace(/[ \t]+/g, ' ').replace(/\s*\n\s*/g, '\n').replace(/\n{2,}/g, '\n').trim();
@@ -62,7 +63,8 @@ const summary = decode(
 let body = '';
 if (article && article.articleBody) body = decode(article.articleBody);
 if (!body || body.length < 300) {
-  const region = html.match(/class="[^"]*(pack-inner-content|article-dt-desc|answer-detail|news-detail|ctm-dt-pages)[^"]*"[\s\S]{0,120000}/i);
+  // Match from the element's opening '<' so no attribute text leaks into the body.
+  const region = html.match(/<[a-z][a-z0-9]*\b[^>]*class="[^"]*(pack-inner-content|article-dt-desc|answer-detail|news-detail|ctm-dt-pages)[^"]*"[^>]*>[\s\S]{0,120000}/i);
   if (region) body = strip(region[0]).slice(0, MAX_BODY * 2);
 }
 if (!body) body = summary;

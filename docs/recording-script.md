@@ -1,4 +1,7 @@
-# Recording run-sheet (target: 8 minutes)
+# Live walkthrough cheat sheet
+
+> The submitted demo video is produced from real captures; see [demo-video.md](demo-video.md). Use this sheet for the **45-minute live walkthrough** with the hiring team, or to record a screen capture by hand.
+
 
 Before recording:
 - [ ] `docker compose up -d` and `npm run bridge` running (bridge terminal visible is a nice touch)

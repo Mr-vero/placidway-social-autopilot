@@ -1,0 +1,16 @@
+import { chromium } from 'playwright';
+import { n8nLogin, dismissN8nPopups, sleep } from './lib.mjs';
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 1920, height: 1080 } });
+const page = await ctx.newPage();
+await n8nLogin(page);
+await page.goto('http://localhost:5678/workflow/pwDailyPipeline1');
+await sleep(3500);
+await dismissN8nPopups(page);
+await sleep(500);
+const btns = await page.locator('button').evaluateAll((els) => els.map((e) => ({ t: e.innerText.trim().slice(0, 30), tid: e.getAttribute('data-test-id'), aria: e.getAttribute('aria-label') })).filter((x) => x.t || x.tid || x.aria));
+console.log(JSON.stringify(btns.filter((x) => /exec|trigger|zoom|fit|run/i.test(JSON.stringify(x))), null, 0));
+const dd = page.locator('[data-test-id="execute-workflow-button"]').locator('xpath=following-sibling::*[1]');
+console.log('dd count', await page.locator('[data-test-id*="execute"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-test-id'))));
+await page.screenshot({ path: 'shots/probe1.png' });
+await b.close();

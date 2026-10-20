@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Recorder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#141210; --panel:#1E1B18; --line:rgba(255,240,225,.10); --ink:#F6F1EA; --ink2:#CFC6BB; --ink3:#8F857B; --coral:#E85A4F; --green:#5CC092; --amber:#E3A94A; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 Inter, system-ui, sans-serif; height:100vh; display:grid; grid-template-columns:320px 1fr; }
+  aside { border-right:1px solid var(--line); padding:22px 16px; overflow:auto; }
+  h1 { font:500 22px Fraunces, serif; margin:0 0 4px; }
+  .sub { color:var(--ink3); font-size:13px; margin-bottom:18px; }
+  .scene { display:flex; gap:10px; align-items:center; width:100%; text-align:left; background:none; border:1px solid transparent; color:var(--ink2); padding:10px 12px; border-radius:10px; cursor:pointer; font:inherit; }
+  .scene:hover { background:var(--panel); }
+  .scene[aria-current="true"] { border-color:var(--coral); background:var(--panel); color:var(--ink); }
+  .num { width:26px; height:26px; border-radius:50%; display:grid; place-items:center; font-size:12px; font-weight:700; background:rgba(255,255,255,.08); flex:none; }
+  .done .num { background:var(--green); color:#111; }
+  .dur { margin-left:auto; font-size:12px; color:var(--ink3); font-variant-numeric:tabular-nums; }
+  .total { margin-top:16px; padding:12px; border-top:1px solid var(--line); font-size:13px; color:var(--ink3); }
+  main { display:flex; flex-direction:column; padding:28px 48px 24px; min-width:0; }
+  .top { display:flex; align-items:center; gap:14px; }
+  .chap { font-weight:700; letter-spacing:.16em; text-transform:uppercase; font-size:13px; color:var(--coral); }
+  select { background:var(--panel); color:var(--ink); border:1px solid var(--line); border-radius:8px; padding:6px 10px; font:inherit; font-size:13px; margin-left:auto; max-width:320px; }
+  .prompter { flex:1; display:flex; align-items:center; justify-content:center; padding:20px 0; overflow:auto; }
+  .prompter p { font:500 clamp(28px, 3.1vw, 46px)/1.45 Fraunces, serif; margin:0; max-width:1100px; color:var(--ink); }
+  .prompter.rec p { color:#fff; }
+  .hint { color:var(--ink3); font-size:14px; text-align:center; margin-bottom:10px; }
+  .bar { display:flex; gap:12px; align-items:center; justify-content:center; }
+  button.big { font:600 16px Inter; border-radius:12px; padding:14px 22px; border:1px solid var(--line); background:var(--panel); color:var(--ink); cursor:pointer; display:inline-flex; gap:10px; align-items:center; }
+  button.big:disabled { opacity:.45; cursor:not-allowed; }
+  button.rec { background:var(--coral); border-color:var(--coral); color:#fff; min-width:190px; justify-content:center; }
+  button.rec.on { background:#fff; color:var(--coral); }
+  .dot { width:12px; height:12px; border-radius:50%; background:currentColor; }
+  .on .dot { animation:pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity:.3; } }
+  .meter { width:240px; height:10px; border-radius:6px; background:rgba(255,255,255,.08); overflow:hidden; }
+  .meter i { display:block; height:100%; width:0; background:linear-gradient(90deg,var(--green),var(--amber) 75%,var(--coral)); transition:width .06s; }
+  .status { text-align:center; color:var(--ink3); font-size:13px; margin-top:12px; min-height:20px; }
+  .count { position:fixed; inset:0; display:none; place-items:center; background:rgba(20,18,16,.6); font:500 180px Fraunces, serif; color:var(--coral); }
+  kbd { background:var(--panel); border:1px solid var(--line); border-radius:5px; padding:1px 6px; font-size:12px; }
+</style>
+</head>
+<body>
+<aside>
+  <h1>Voice-over</h1>
+  <div class="sub">One take per scene. The video re-times itself to your voice.</div>
+  <div id="list"></div>
+  <div class="total" id="total"></div>
+</aside>
+<main>
+  <div class="top"><span class="chap" id="chap"></span><select id="mic" aria-label="Microphone"></select></div>
+  <div class="prompter" id="prompter"><p id="text"></p></div>
+  <div class="hint">Speak calmly; pauses are fine (edges are trimmed automatically). <kbd>Space</kbd> record / stop · <kbd>P</kbd> play · <kbd>→</kbd> next</div>
+  <div class="bar">
+    <div class="meter"><i id="lvl"></i></div>
+    <button class="big rec" id="rec"><span class="dot"></span><span id="recl">Record</span></button>
+    <button class="big" id="play" disabled>▶ Play take</button>
+    <button class="big" id="next">Next scene →</button>
+  </div>
+  <div class="status" id="status"></div>
+</main>
+<div class="count" id="count"></div>
+<script>
+const $ = (s) => document.querySelector(s);
+let script, manifest = {}, idx = 0, stream, recorder, chunks = [], analyser, audio;
+
+async function load() {
+  script = await (await fetch('/script')).json();
+  manifest = await (await fetch('/manifest')).json();
+  idx = Math.max(0, script.scenes.findIndex((s) => !manifest[s.id]));
+  render();
+  await initMic();
+}
+function fmt(s) { return `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`; }
+function render() {
+  const sc = script.scenes[idx];
+  $('#chap').textContent = `${String(idx + 1).padStart(2, '0')} / ${script.scenes.length} · ${sc.chapter}`;
+  $('#text').textContent = sc.text;
+  $('#list').innerHTML = script.scenes.map((s, i) => `<button class="scene ${manifest[s.id] ? 'done' : ''}" data-i="${i}" aria-current="${i === idx}"><span class="num">${manifest[s.id] ? '✓' : i + 1}</span>${s.chapter}<span class="dur">${manifest[s.id] ? fmt(manifest[s.id].duration) : ''}</span></button>`).join('');
+  const done = script.scenes.filter((s) => manifest[s.id]);
+  $('#total').innerHTML = `${done.length}/${script.scenes.length} recorded · voice ${fmt(done.reduce((n, s) => n + manifest[s.id].duration, 0))}${done.length === script.scenes.length ? '<br><b style="color:var(--green)">All done. Run <code>npm run render</code>.</b>' : ''}`;
+  $('#play').disabled = !manifest[sc.id];
+}
+async function initMic(deviceId) {
+  if (stream) stream.getTracks().forEach((t) => t.stop());
+  stream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: deviceId ? { exact: deviceId } : undefined, echoCancellation: false, noiseSuppression: false, autoGainControl: false, channelCount: 1, sampleRate: 48000 } });
+  const devs = (await navigator.mediaDevices.enumerateDevices()).filter((d) => d.kind === 'audioinput');
+  const cur = stream.getAudioTracks()[0].getSettings().deviceId;
+  $('#mic').innerHTML = devs.map((d) => `<option value="${d.deviceId}" ${d.deviceId === cur ? 'selected' : ''}>${d.label || 'Microphone'}</option>`).join('');
+  const ctx = new AudioContext();
+  analyser = ctx.createAnalyser(); analyser.fftSize = 1024;
+  ctx.createMediaStreamSource(stream).connect(analyser);
+  const buf = new Float32Array(analyser.fftSize);
+  (function tick() { analyser.getFloatTimeDomainData(buf); let p = 0; for (const v of buf) p = Math.max(p, Math.abs(v)); $('#lvl').style.width = `${Math.min(100, p * 140)}%`; requestAnimationFrame(tick); })();
+}
+async function countdown() {
+  const c = $('#count'); c.style.display = 'grid';
+  for (const n of [3, 2, 1]) { c.textContent = n; await new Promise((r) => setTimeout(r, 650)); }
+  c.style.display = 'none';
+}
+async function toggle() {
+  if (recorder && recorder.state === 'recording') { recorder.stop(); return; }
+  await countdown();
+  chunks = [];
+  const mime = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/mp4';
+  recorder = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 192000 });
+  recorder.ondataavailable = (e) => chunks.push(e.data);
+  recorder.onstop = upload;
+  recorder.start();
+  $('#rec').classList.add('on'); $('#recl').textContent = 'Stop'; $('#prompter').classList.add('rec');
+  $('#status').textContent = 'Recording…';
+}
+async function upload() {
+  $('#rec').classList.remove('on'); $('#recl').textContent = 'Re-record'; $('#prompter').classList.remove('rec');
+  const sc = script.scenes[idx];
+  $('#status').textContent = 'Cleaning up audio…';
+  const ext = recorder.mimeType.includes('mp4') ? '.m4a' : '.webm';
+  const r = await fetch(`/upload?id=${sc.id}&ext=${ext}`, { method: 'POST', body: new Blob(chunks) });
+  if (!r.ok) { $('#status').textContent = `Upload failed: ${await r.text()}`; return; }
+  const take = await r.json();
+  manifest[sc.id] = take;
+  $('#status').textContent = `Saved ${sc.id} · ${take.duration.toFixed(1)} s. Press P to listen, → for the next scene.`;
+  render();
+}
+function play() {
+  const sc = script.scenes[idx];
+  if (!manifest[sc.id]) return;
+  if (audio) audio.pause();
+  audio = new Audio(`/voice/${manifest[sc.id].file}?t=${Date.now()}`); audio.play();
+}
+function go(i) { idx = Math.max(0, Math.min(script.scenes.length - 1, i)); render(); $('#status').textContent = manifest[script.scenes[idx].id] ? 'Already recorded: Space to redo.' : ''; $('#recl').textContent = manifest[script.scenes[idx].id] ? 'Re-record' : 'Record'; }
+$('#rec').onclick = toggle; $('#play').onclick = play; $('#next').onclick = () => go(idx + 1);
+$('#list').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b) go(Number(b.dataset.i)); };
+$('#mic').onchange = (e) => initMic(e.target.value);
+document.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'SELECT') return;
+  if (e.code === 'Space') { e.preventDefault(); toggle(); }
+  if (e.key === 'p' || e.key === 'P') play();
+  if (e.key === 'ArrowRight') go(idx + 1);
+  if (e.key === 'ArrowLeft') go(idx - 1);
+});
+load().catch((e) => { $('#status').textContent = `Microphone unavailable: ${e.message}`; });
+</script>
+</body>
+</html>

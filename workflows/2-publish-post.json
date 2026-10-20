@@ -130,7 +130,7 @@
           },
           "conditions": [
             {
-              "id": "5c43d640-ba21-4dda-a719-13c8d21e312f",
+              "id": "9a63f1f0-36c6-46fb-9a65-7b761a9e2835",
               "leftValue": "={{ !!$json.skip }}",
               "rightValue": "",
               "operator": {
@@ -201,7 +201,7 @@
           },
           "conditions": [
             {
-              "id": "9182a871-0e79-49f0-a82c-c3beda8fa0ec",
+              "id": "429003f3-8c9d-46de-a353-80caf2f0184b",
               "leftValue": "={{ $('Prepare Publish').item.json.dry_run }}",
               "rightValue": "",
               "operator": {
@@ -469,7 +469,7 @@
           },
           "conditions": [
             {
-              "id": "fc5c180c-b02e-4b80-b550-178c18e99531",
+              "id": "aafb6522-7195-49a2-80fd-4880aa49b868",
               "leftValue": "={{ $json.crosspost_ig && !$json.scheduled && !!$json.fb_photo_id && !!$env.IG_USER_ID }}",
               "rightValue": "",
               "operator": {
@@ -671,7 +671,7 @@
           },
           "conditions": [
             {
-              "id": "7f2be3b4-32c5-4aa8-b307-a896d64fccfe",
+              "id": "d3d5d26a-6217-432f-8228-aeee7f08aa22",
               "leftValue": "={{ !!$('Outcome').item.json.alert }}",
               "rightValue": "",
               "operator": {
@@ -729,7 +729,7 @@
           },
           "conditions": [
             {
-              "id": "f0f71584-1ffc-4dd8-a27d-92dbff5066c1",
+              "id": "241519ce-5ea3-4087-a177-85df3d6d8b27",
               "leftValue": "={{ !!$env.ALERT_WEBHOOK_URL }}",
               "rightValue": "",
               "operator": {

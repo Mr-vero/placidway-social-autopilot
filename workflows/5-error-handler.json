@@ -80,7 +80,7 @@
           },
           "conditions": [
             {
-              "id": "7db88fb3-1333-4aeb-9012-676809efb11c",
+              "id": "fc5fd645-78a2-4578-ba68-0feebbf49802",
               "leftValue": "={{ !!$env.ALERT_WEBHOOK_URL }}",
               "rightValue": "",
               "operator": {

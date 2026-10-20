@@ -16,7 +16,8 @@ Sitemaps ─▶ pick 1 fresh URL ─▶ extract (JSON-LD) ─▶ Claude writes �
 | README: setup, env, running, architecture | this file |
 | Sample output: posts from real PlacidWay pages | [`samples/`](samples/README.md) |
 | Facebook token guide | [`docs/facebook-setup.md`](docs/facebook-setup.md) |
-| Recording run-sheet | [`docs/recording-script.md`](docs/recording-script.md) |
+| Demo video (5–10 min) | Built from real captures in [`video/`](video/); record your narration and render via [`docs/demo-video.md`](docs/demo-video.md) |
+| Live-walkthrough cheat sheet | [`docs/recording-script.md`](docs/recording-script.md) |
 
 ---
 

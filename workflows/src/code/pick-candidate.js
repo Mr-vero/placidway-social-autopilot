@@ -42,6 +42,12 @@ responses.forEach((r, i) => {
   const type = targets[i] && targets[i].type;
   if (!type) return;
   const xml = typeof r.json.data === 'string' ? r.json.data : '';
+  if (!xml) {
+    // One slow/failed sitemap shouldn't sink the run; the others still feed selection.
+    pools[type] = [];
+    poolSizes[type] = { in_sitemap: 0, fresh_unused: 0, error: String((r.json.error && r.json.error.message) || 'empty response').slice(0, 120) };
+    return;
+  }
   const all = parseSitemap(xml, type);
   // Freshest first: lastmod, then id (PlacidWay ids are monotonic, and lastmod alone is noisy
   // because old pages get touched).

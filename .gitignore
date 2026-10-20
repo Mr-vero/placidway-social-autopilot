@@ -11,3 +11,5 @@ video/captures/
 video/out/
 video/public/captures/
 video/public/voice/
+video/build/
+video/.remotion/

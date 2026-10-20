@@ -55,6 +55,16 @@ test('pick-candidate: avoids recently used categories and falls back across type
   assert.match(out.json.selection.reason, /fell back/);
 });
 
+test('pick-candidate: one failed sitemap is skipped, the others still feed selection', async () => {
+  const [out] = await runCode('pick-candidate.js', {
+    input: [{ error: { message: 'The connection was aborted' } }, { data: sitemap([['https://www.placidway.com/package/8700/Dental-Implants-Package-in-Cancun', '2026-10-20']]) }, { data: sitemap([]) }, { data: sitemap([]) }],
+    nodes: { 'Start Run': run(2), 'Load Settings': { settings: SETTINGS, used_urls: [], recent: [] }, 'Sitemap Targets': targets },
+  });
+  assert.equal(out.json.found, true);
+  assert.equal(out.json.item.type, 'package');
+  assert.match(out.json.selection.pools.article.error, /aborted/);
+});
+
 test('pick-candidate: throws when every sitemap is empty (site down / markup change)', async () => {
   await assert.rejects(runCode('pick-candidate.js', {
     input: [{ data: '' }, { data: '' }, { data: '' }, { data: '' }],
@@ -88,6 +98,7 @@ test('extract: package captures listed price from Product offers', async () => {
   assert.match(j.source.summary, /USD 550/);
   assert.ok(j.source.price_facts.length > 0, 'price facts');
   assert.match(j.source.excerpt, /LISTED PRICE/);
+  assert.doesNotMatch(j.source.excerpt, /class="|ctm-dt-pages|">|-->|<!--/, 'no HTML residue in the body');
 });
 
 test('extract: Q&A page via BlogPosting', async () => {

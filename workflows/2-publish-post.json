@@ -6,9 +6,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## Publish one approved post\nCalled by the pipeline (auto mode) and the dashboard (approve / retry).\n**dry_run** simulates the Graph calls; otherwise: upload photo unpublished → create feed post (immediate or natively scheduled).\nFacebook errors are classified (expired token, rate limit, permissions, network) and raised as alerts.",
+        "content": "## Publish one approved post\nCalled by the pipeline (auto mode) and the dashboard (approve / retry). **dry_run** simulates the Graph calls and records them.\nLive: upload photo unpublished → create feed post (immediate or natively scheduled). Errors are classified (expired token, rate limit, permission, network) and raised as alerts.",
         "height": 220,
-        "width": 700,
+        "width": 980,
         "color": 4
       },
       "id": "d8664e9f-7775-48d2-aa3f-a14e77ff467b",
@@ -16,8 +16,56 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -60,
-        -60
+        -40,
+        -420
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Validate · log · route",
+        "height": 420,
+        "width": 1300,
+        "color": 7
+      },
+      "id": "c0b55138-d0d7-4eb3-a60a-8a84a84aa9a7",
+      "name": "Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        -170
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Facebook Graph API  (+ optional Instagram)",
+        "height": 780,
+        "width": 1640,
+        "color": 7
+      },
+      "id": "e9c57d7c-e76d-444f-ac46-ce114ce66ccb",
+      "name": "Note 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1300,
+        -170
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Record outcome · alert · return",
+        "height": 360,
+        "width": 2980,
+        "color": 7
+      },
+      "id": "ffa91f9d-1e15-4052-a30b-f2717acd43d3",
+      "name": "Note 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        680
       ]
     },
     {
@@ -30,7 +78,7 @@
       "typeVersion": 1.1,
       "position": [
         0,
-        300
+        60
       ]
     },
     {
@@ -47,7 +95,7 @@
       "typeVersion": 2.6,
       "position": [
         220,
-        300
+        60
       ],
       "credentials": {
         "postgres": {
@@ -68,7 +116,7 @@
       "typeVersion": 2,
       "position": [
         440,
-        300
+        60
       ]
     },
     {
@@ -82,7 +130,7 @@
           },
           "conditions": [
             {
-              "id": "be1cc0cb-320f-4405-895b-0e752fd35f87",
+              "id": "5c43d640-ba21-4dda-a719-13c8d21e312f",
               "leftValue": "={{ !!$json.skip }}",
               "rightValue": "",
               "operator": {
@@ -103,7 +151,7 @@
       "typeVersion": 2.2,
       "position": [
         660,
-        300
+        60
       ]
     },
     {
@@ -116,7 +164,7 @@
       "typeVersion": 2,
       "position": [
         880,
-        100
+        -80
       ]
     },
     {
@@ -133,7 +181,7 @@
       "typeVersion": 2.6,
       "position": [
         880,
-        300
+        60
       ],
       "credentials": {
         "postgres": {
@@ -153,7 +201,7 @@
           },
           "conditions": [
             {
-              "id": "6221ec2c-9ce8-4923-982a-d5fbdd18022f",
+              "id": "9182a871-0e79-49f0-a82c-c3beda8fa0ec",
               "leftValue": "={{ $('Prepare Publish').item.json.dry_run }}",
               "rightValue": "",
               "operator": {
@@ -174,7 +222,7 @@
       "typeVersion": 2.2,
       "position": [
         1100,
-        300
+        60
       ]
     },
     {
@@ -187,8 +235,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1320,
-        80
+        1360,
+        -80
       ]
     },
     {
@@ -202,8 +250,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        1320,
-        400
+        1360,
+        140
       ]
     },
     {
@@ -219,8 +267,8 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        1540,
-        300
+        1580,
+        40
       ]
     },
     {
@@ -264,8 +312,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1760,
-        300
+        1800,
+        40
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -297,8 +345,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        1760,
-        500
+        1800,
+        240
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -315,8 +363,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        1980,
-        400
+        2020,
+        140
       ]
     },
     {
@@ -344,8 +392,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2200,
-        400
+        2240,
+        140
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -362,8 +410,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2420,
-        320
+        2460,
+        60
       ]
     },
     {
@@ -391,8 +439,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2640,
-        320
+        2680,
+        60
       ],
       "onError": "continueRegularOutput"
     },
@@ -406,8 +454,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2860,
-        320
+        2680,
+        240
       ]
     },
     {
@@ -421,7 +469,7 @@
           },
           "conditions": [
             {
-              "id": "074946b3-638f-4dc5-aa28-a4ead6e89e9e",
+              "id": "fc5c180c-b02e-4b80-b550-178c18e99531",
               "leftValue": "={{ $json.crosspost_ig && !$json.scheduled && !!$json.fb_photo_id && !!$env.IG_USER_ID }}",
               "rightValue": "",
               "operator": {
@@ -441,8 +489,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        3080,
-        320
+        1580,
+        440
       ]
     },
     {
@@ -467,8 +515,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3300,
-        500
+        1800,
+        440
       ],
       "onError": "continueRegularOutput"
     },
@@ -494,8 +542,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3520,
-        500
+        2020,
+        440
       ],
       "onError": "continueRegularOutput"
     },
@@ -522,8 +570,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3740,
-        500
+        2240,
+        440
       ],
       "onError": "continueRegularOutput"
     },
@@ -537,8 +585,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3960,
-        500
+        2460,
+        480
       ]
     },
     {
@@ -551,8 +599,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2420,
-        660
+        2460,
+        300
       ]
     },
     {
@@ -562,8 +610,8 @@
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
       "position": [
-        4180,
-        300
+        0,
+        860
       ]
     },
     {
@@ -579,8 +627,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        4400,
-        300
+        260,
+        860
       ],
       "credentials": {
         "postgres": {
@@ -594,7 +642,7 @@
         "operation": "executeQuery",
         "query": "UPDATE runs SET status = CASE WHEN $2 = 'publish_failed' THEN 'error' ELSE 'success' END,\n       fb_post_id = $3, error = $4, details = $5::jsonb, finished_at = now()\n     WHERE run_id = $1",
         "options": {
-          "queryReplacement": "={{ [ $('Outcome').item.json.run_id, $('Outcome').item.json.status, $('Outcome').item.json.fb_post_id || null, $('Outcome').item.json.error || null, JSON.stringify({ status: $('Outcome').item.json.status, scheduled_for: $('Outcome').item.json.scheduled_for, route: $('Outcome').item.json.route, simulated_request: $('Outcome').item.json.simulated_request || null }) ] }}"
+          "queryReplacement": "={{ [ $('Outcome').item.json.run_id, $('Outcome').item.json.status, $('Outcome').item.json.fb_post_id || null, $('Outcome').item.json.error || null, JSON.stringify({ status: $('Outcome').item.json.status, post_text: $('Outcome').item.json.message, fb_permalink: $('Outcome').item.json.fb_permalink || null, scheduled_for: $('Outcome').item.json.scheduled_for, route: $('Outcome').item.json.route, simulated_request: $('Outcome').item.json.simulated_request || null }) ] }}"
         }
       },
       "id": "b641f0a8-6f0b-42a0-aa3c-ebc128abe07b",
@@ -602,8 +650,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        4620,
-        300
+        520,
+        860
       ],
       "credentials": {
         "postgres": {
@@ -623,7 +671,7 @@
           },
           "conditions": [
             {
-              "id": "f8e66ba7-85fd-4f09-88da-2a7511a4b406",
+              "id": "7f2be3b4-32c5-4aa8-b307-a896d64fccfe",
               "leftValue": "={{ !!$('Outcome').item.json.alert }}",
               "rightValue": "",
               "operator": {
@@ -643,8 +691,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        4840,
-        300
+        780,
+        860
       ]
     },
     {
@@ -660,8 +708,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        5060,
-        140
+        1040,
+        780
       ],
       "credentials": {
         "postgres": {
@@ -681,7 +729,7 @@
           },
           "conditions": [
             {
-              "id": "4582431c-37f0-429b-8b8d-5554a253884f",
+              "id": "f0f71584-1ffc-4dd8-a27d-92dbff5066c1",
               "leftValue": "={{ !!$env.ALERT_WEBHOOK_URL }}",
               "rightValue": "",
               "operator": {
@@ -701,8 +749,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5280,
-        140
+        1300,
+        780
       ]
     },
     {
@@ -718,8 +766,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        5500,
-        40
+        1560,
+        760
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -736,8 +784,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5720,
-        300
+        1820,
+        880
       ]
     }
   ],
@@ -1144,5 +1192,5 @@
     "templateCredsSetupCompleted": true
   },
   "tags": [],
-  "versionId": "b71db3fc-d4cf-4b68-a89c-162fc205685e"
+  "versionId": "381a7e51-107f-4ef5-ab41-f33d14be780b"
 }

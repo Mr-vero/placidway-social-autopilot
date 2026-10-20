@@ -48,7 +48,7 @@
           },
           "conditions": [
             {
-              "id": "e1a5ec6b-3c58-4782-b83c-a8614eabc27f",
+              "id": "ca96a05b-e418-4065-b87f-efca4d61611d",
               "leftValue": "={{ $json.headers['x-pw-token'] === $env.PW_API_TOKEN && !!$env.PW_API_TOKEN }}",
               "rightValue": "",
               "operator": {
@@ -75,7 +75,7 @@
     {
       "parameters": {
         "operation": "executeQuery",
-        "query": "SELECT json_build_object(\n      'settings', (SELECT json_object_agg(key, json_build_object('value', value, 'description', description, 'updated_at', updated_at)) FROM settings),\n      'counts', (SELECT coalesce(json_object_agg(status, n), '{}'::json) FROM (SELECT status, count(*) n FROM posts GROUP BY status) c),\n      'posts', (SELECT coalesce(json_agg(x ORDER BY x.created_at DESC), '[]'::json) FROM (\n          SELECT p.id, p.source_url, p.content_type, p.category, p.title, p.summary, p.image_url, p.media_path, p.source_excerpt,\n                 p.post_text, p.hashtags, p.claims, p.guardrail, p.attempts, p.status, p.dry_run, p.scheduled_for,\n                 p.fb_post_id, p.fb_permalink, p.ig_media_id, p.edited, p.reviewed_by, p.review_note, p.error,\n                 p.created_at, p.updated_at, p.published_at, p.source_published_at,\n                 e.reactions, e.comments, e.shares, e.clicks, e.fetched_at AS engagement_at\n          FROM posts p LEFT JOIN post_latest_engagement e ON e.post_id = p.id\n          ORDER BY p.created_at DESC LIMIT 60) x),\n      'runs', (SELECT coalesce(json_agg(r ORDER BY r.started_at DESC), '[]'::json) FROM (SELECT * FROM runs ORDER BY started_at DESC LIMIT 40) r),\n      'alerts', (SELECT coalesce(json_agg(a ORDER BY a.created_at DESC), '[]'::json) FROM (SELECT * FROM alerts WHERE NOT acknowledged ORDER BY created_at DESC LIMIT 20) a),\n      'server_time', now(),\n      'env', json_build_object('fb_configured', $1::boolean, 'ig_configured', $2::boolean, 'tz', $3::text, 'llm_backend', $4::text,\n                               'writer_model', $5::text, 'reviewer_model', $6::text)\n    ) AS state",
+        "query": "SELECT json_build_object(\n      'settings', (SELECT json_object_agg(key, json_build_object('value', value, 'description', description, 'updated_at', updated_at)) FROM settings),\n      'counts', (SELECT coalesce(json_object_agg(status, n), '{}'::json) FROM (SELECT status, count(*) n FROM posts GROUP BY status) c),\n      'posts', (SELECT coalesce(json_agg(x ORDER BY x.created_at DESC), '[]'::json) FROM (\n          SELECT p.id, p.source_url, p.content_type, p.category, p.title, p.summary, p.image_url, p.media_path, p.source_excerpt,\n                 p.post_text, p.hashtags, p.claims, p.guardrail, p.attempts, p.status, p.dry_run, p.scheduled_for,\n                 p.fb_post_id, p.fb_permalink, p.ig_media_id, p.edited, p.reviewed_by, p.review_note, p.error,\n                 p.created_at, p.updated_at, p.published_at, p.source_published_at,\n                 e.reactions, e.comments, e.shares, e.clicks, e.views, e.fetched_at AS engagement_at\n          FROM posts p LEFT JOIN post_latest_engagement e ON e.post_id = p.id\n          ORDER BY p.created_at DESC LIMIT 60) x),\n      'runs', (SELECT coalesce(json_agg(r ORDER BY r.started_at DESC), '[]'::json) FROM (SELECT * FROM runs ORDER BY started_at DESC LIMIT 40) r),\n      'alerts', (SELECT coalesce(json_agg(a ORDER BY a.created_at DESC), '[]'::json) FROM (SELECT * FROM alerts WHERE NOT acknowledged ORDER BY created_at DESC LIMIT 20) a),\n      'server_time', now(),\n      'env', json_build_object('fb_configured', $1::boolean, 'ig_configured', $2::boolean, 'tz', $3::text, 'llm_backend', $4::text,\n                               'writer_model', $5::text, 'reviewer_model', $6::text)\n    ) AS state",
         "options": {
           "queryReplacement": "={{ [ !!($env.FB_PAGE_ID && $env.FB_PAGE_ACCESS_TOKEN), !!$env.IG_USER_ID, $env.GENERIC_TIMEZONE || 'UTC', $env.LLM_BACKEND || 'cli', $env.LLM_MODEL_WRITER || 'sonnet', $env.LLM_MODEL_REVIEWER || 'haiku' ] }}"
         }
@@ -157,7 +157,7 @@
           },
           "conditions": [
             {
-              "id": "e1a5ec6b-3c58-4782-b83c-a8614eabc27f",
+              "id": "ca96a05b-e418-4065-b87f-efca4d61611d",
               "leftValue": "={{ $json.headers['x-pw-token'] === $env.PW_API_TOKEN && !!$env.PW_API_TOKEN }}",
               "rightValue": "",
               "operator": {
@@ -276,7 +276,7 @@
           },
           "conditions": [
             {
-              "id": "e0b1e6e3-af94-46d8-a3f7-d70e560b3c7d",
+              "id": "e1224c99-48be-41e1-b024-23d95355375b",
               "leftValue": "={{ $json.ok }}",
               "rightValue": "",
               "operator": {

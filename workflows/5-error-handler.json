@@ -33,7 +33,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Format Alert: n8n Error Trigger payload -> alert row + chat message.\nconst e = $json;\nconst wf = (e.workflow && e.workflow.name) || 'unknown workflow';\nconst exec = e.execution || {};\nconst err = exec.error || {};\nconst node = exec.lastNodeExecuted || (err.node && err.node.name) || 'unknown node';\nconst msg = String(err.message || 'Unknown error').slice(0, 500);\n\nlet hint = '';\nif (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|5\\d\\d|timeout/i.test(msg) && /sitemap|page/i.test(node)) hint = 'PlacidWay looks unreachable: will retry on the next schedule.';\nelse if (/Claude|bridge|8787/i.test(node + msg)) hint = 'LLM bridge unreachable: is `npm run bridge` running on the host?';\nelse if (/thin|markup/i.test(msg)) hint = 'Page structure changed: review the extractor.';\n\nconst prefix = /publish/i.test(wf) ? 'pub' : /engagement/i.test(wf) ? 'eng' : 'pipe';\nreturn {\n  json: {\n    run_id: `${prefix}-${exec.id}`,\n    severity: 'error',\n    source: wf,\n    message: `${wf} failed at \"${node}\": ${msg}${hint ? `: ${hint}` : ''}`,\n    details: JSON.stringify({ workflow: wf, node, execution_id: exec.id, url: exec.url || null, mode: exec.mode, stack: String(err.stack || '').slice(0, 1200) }),\n    text: `:rotating_light: *PlacidWay Autopilot*: ${wf} failed at \"${node}\"\\n${msg}${hint ? `\\n_${hint}_` : ''}${exec.url ? `\\n${exec.url}` : ''}`,\n  },\n};\n",
+        "jsCode": "// Format Alert: n8n Error Trigger payload -> alert row + chat message.\nconst e = $json;\nconst wf = (e.workflow && e.workflow.name) || 'unknown workflow';\nconst exec = e.execution || {};\nconst err = exec.error || {};\nconst node = exec.lastNodeExecuted || (err.node && err.node.name) || 'unknown node';\nconst msg = String(err.message || 'Unknown error').slice(0, 500);\n\nlet hint = '';\nif (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|cannot be established|5\\d\\d|timeout/i.test(msg) && /sitemap|page/i.test(node)) hint = 'PlacidWay looks unreachable: will retry on the next schedule.';\nelse if (/Claude|bridge|8787/i.test(node + msg)) hint = 'LLM bridge unreachable: is `npm run bridge` running on the host?';\nelse if (/thin|markup/i.test(msg)) hint = 'Page structure changed: review the extractor.';\n\nconst prefix = /publish/i.test(wf) ? 'pub' : /engagement/i.test(wf) ? 'eng' : 'pipe';\nreturn {\n  json: {\n    run_id: `${prefix}-${exec.id}`,\n    severity: 'error',\n    source: wf,\n    message: `${wf} failed at \"${node}\": ${msg}${hint ? `: ${hint}` : ''}`,\n    details: JSON.stringify({ workflow: wf, node, execution_id: exec.id, url: exec.url || null, mode: exec.mode, stack: String(err.stack || '').slice(0, 1200) }),\n    text: `:rotating_light: *PlacidWay Autopilot*: ${wf} failed at \"${node}\"\\n${msg}${hint ? `\\n_${hint}_` : ''}${exec.url ? `\\n${exec.url}` : ''}`,\n  },\n};\n",
         "mode": "runOnceForEachItem"
       },
       "id": "1f2e7af8-aebd-439a-a2f3-d893bdb1201e",
@@ -80,7 +80,7 @@
           },
           "conditions": [
             {
-              "id": "424dd227-26f2-419a-849d-daefa0383d7a",
+              "id": "7db88fb3-1333-4aeb-9012-676809efb11c",
               "leftValue": "={{ !!$env.ALERT_WEBHOOK_URL }}",
               "rightValue": "",
               "operator": {

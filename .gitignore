@@ -4,3 +4,10 @@ media/*
 !media/.gitkeep
 db/seed/credentials.json
 .DS_Store
+
+# video build artifacts
+video/shots/
+video/captures/
+video/out/
+video/public/captures/
+video/public/voice/

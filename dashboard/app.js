@@ -324,7 +324,7 @@ function detail(p) {
         ${ui.editing ? `<textarea id="editor" class="fb-edit" spellcheck="true" aria-label="Edit post text">${esc(ui.draft)}</textarea>` : `<div class="fb-text">${fbText(text)}</div>`}
         ${img ? `<img class="fb-img" src="${esc(img)}" alt="Post image">` : ''}
         <div class="fb-stats"><span class="fb-reacts">${p.reactions != null ? `<span class="r" style="background:#1877F2">👍</span><span class="r" style="background:#F33E58">❤</span><span style="margin-left:12px">${p.reactions}</span>` : '<span>—</span>'}</span>
-          <span>${p.comments != null ? `${p.comments} comments · ${p.shares || 0} shares` : p.dry_run ? 'Simulated: no engagement' : ''}</span></div>
+          <span>${p.comments != null ? `${p.comments} comments · ${p.shares || 0} shares` : p.clicks != null ? `${p.clicks} clicks${p.views != null ? ` · ${p.views} views` : ''}` : p.dry_run ? 'Simulated: no engagement' : ''}</span></div>
         <div class="fb-actions"><span>👍 Like</span><span>💬 Comment</span><span>↗ Share</span></div>
       </div>
       <div class="panel"><div class="fb-ribbon">
@@ -409,7 +409,7 @@ function renderPosts(view) {
 function postCard(p, i) {
   const img = media(p);
   const eng = p.reactions != null
-    ? `<span class="eng"><span title="Reactions">${I.like}${p.reactions}</span><span title="Comments">${I.comment}${p.comments ?? 0}</span><span title="Shares">${I.share}${p.shares ?? 0}</span>${p.clicks != null ? `<span title="Clicks">${I.click}${p.clicks}</span>` : ''}</span>`
+    ? `<span class="eng"><span title="Reactions">${I.like}${p.reactions}</span>${p.comments != null ? `<span title="Comments">${I.comment}${p.comments}</span>` : ''}${p.shares != null ? `<span title="Shares">${I.share}${p.shares}</span>` : ''}${p.clicks != null ? `<span title="Clicks">${I.click}${p.clicks}</span>` : ''}${p.views != null ? `<span title="Views">👁 ${p.views}</span>` : ''}</span>`
     : `<span class="muted">${p.dry_run && ['published', 'scheduled'].includes(p.status) ? 'Simulated publish' : 'No engagement yet'}</span>`;
   return `<article class="pcard" style="animation-delay:${Math.min(i, 12) * 30}ms">
     ${img ? `<img src="${esc(img)}" alt="" loading="lazy">` : '<div class="ph"></div>'}

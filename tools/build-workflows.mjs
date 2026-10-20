@@ -50,6 +50,7 @@ function wf(key, name, build, settings = {}) {
       connections[from].main[out].push({ node: to, type: 'main', index: input });
     },
     chain(...names) { for (let i = 0; i < names.length - 1; i++) api.link(names[i], names[i + 1]); },
+    layout(map) { api._layout = map; },
     note(content, position, width, height, color = 7) {
       nodes.push({
         parameters: { content, height, width, color },
@@ -60,6 +61,9 @@ function wf(key, name, build, settings = {}) {
     },
   };
   build(api);
+  if (api._layout) {
+    for (const n of nodes) if (api._layout[n.name]) n.position = api._layout[n.name];
+  }
   return {
     id: IDS[key],
     name,
@@ -122,12 +126,26 @@ const PM = "$('Prepare Media').item.json.media";
 // =====================================================================
 const pipeline = wf('pipeline', 'PW · 1 · Daily Post Pipeline', (w) => {
   const Y = 300;
-  w.note('## PlacidWay → Facebook daily autopilot\nOne post per day. Triggers: schedule (07:00), manual, or the dashboard **Run now** button.\nErrors route to **PW · 5 · Error Handler** (dashboard alert + optional Slack/Discord webhook).', [-80, -40], 560, 200, 4);
-  w.note('### ① Select\nSitemaps → drop used URLs → weekday content-type rotation → avoid repeating recent categories. 4 requests, 1.1 s apart (robots.txt-friendly).', [640, 120], 1140, 400, 7);
-  w.note('### ② Extract\nClaim the URL (UNIQUE constraint = never posts twice) → fetch one page → JSON-LD / OpenGraph / HTML fallback.', [1800, 120], 900, 400, 7);
-  w.note('### ③ Generate + ④ Guardrails\nClaude writes structured parts (+ a source quote per line) → code assembles the post → deterministic rule checks → independent Claude reviewer → pass, retry with feedback, or escalate to a human.', [2720, 120], 1600, 560, 6);
-  w.note('### ⑤ Image\nBrand the featured image, or render a branded card when none exists.', [4340, 60], 980, 640, 7);
-  w.note('### ⑥ Save, publish, log\nAuto mode publishes via **PW · 2 · Publish Post**; approval mode waits for the dashboard.', [5340, 120], 1460, 400, 7);
+  // Three rows: ① select + ② extract · ③ generate + ④ guardrails · ⑤ image + ⑥ save/publish
+  w.note('## PlacidWay → Facebook daily autopilot\nOne guardrailed post per day. Triggers: **07:00 schedule**, **manual**, or the dashboard **Run now**.\nAny failure routes to **PW · 5 · Error Handler** → dashboard alert (+ optional Slack/Discord).', [-40, -380], 760, 200, 4);
+  w.note('### ① Select\nSitemaps → drop used URLs → weekday content-type rotation → category cool-down.\n4 requests, 1.1 s apart (robots.txt-friendly).', [180, -150], 1620, 540, 7);
+  w.note('### ② Extract\nClaim the URL first (DB UNIQUE = never posts twice) → fetch one page → JSON-LD › OpenGraph › HTML.', [1840, -150], 1060, 540, 7);
+  w.note('### ③ Generate  +  ④ Guardrails\nClaude writes structured parts + a verbatim source quote per line → code assembles the post → deterministic rules → independent Claude reviewer → pass · retry with feedback · escalate to a human.', [180, 420], 2720, 380, 7);
+  w.note('### ⑤ Image\nSmart-crop + brand bar, or a rendered title card when there is no image.', [180, 840], 1160, 560, 7);
+  w.note('### ⑥ Save · publish · log\nAuto mode publishes via **PW · 2 · Publish Post**; approval mode waits for the dashboard.', [1380, 840], 1520, 560, 7);
+  w.layout({
+    'Daily 07:00': [0, -40], 'Manual Run': [0, 120], 'From Dashboard': [0, 280],
+    'Start Run': [240, 120], 'Load Settings': [460, 120], 'Log Run Start': [680, 120], 'Sitemap Targets': [900, 120],
+    'Fetch Sitemaps': [1120, 120], 'Pick Candidate': [1340, 120], 'Found Item?': [1560, 120],
+    'Claim URL': [1900, 120], 'Claimed?': [2120, 120], 'Nothing To Post': [2120, 280], 'Polite Delay': [2340, 120],
+    'Fetch Page': [2560, 120], 'Extract Content': [2780, 120],
+    'Build Prompt': [260, 560], 'Write Post (Claude)': [520, 560], 'Assemble Post': [780, 560], 'Rule-Based Checks': [1040, 560],
+    'Build Review Prompt': [1300, 560], 'Fact-Check (Claude)': [1560, 560], 'Guardrail Verdict': [1820, 560], 'Retry?': [2080, 560],
+    'Prepare Media': [260, 1080], 'Media Route': [480, 1080], 'Download Image': [720, 980], 'Brand Image': [960, 980],
+    'Render Card': [960, 1200], 'Save Media': [1200, 1080],
+    'Draft Record': [1460, 1080], 'Save Draft': [1680, 1080], 'Auto-Publish?': [1900, 1080], 'Publish Post': [2120, 980],
+    'Finish Run': [2340, 1080], 'Close Run': [2560, 1080],
+  });
 
   w.node('Daily 07:00', 'n8n-nodes-base.scheduleTrigger', 1.2, [0, 200], { rule: { interval: [{ field: 'days', triggerAtHour: 7 }] } });
   w.node('Manual Run', 'n8n-nodes-base.manualTrigger', 1, [0, 380]);
@@ -273,7 +291,20 @@ const pipeline = wf('pipeline', 'PW · 1 · Daily Post Pipeline', (w) => {
 // =====================================================================
 const publish = wf('publish', 'PW · 2 · Publish Post', (w) => {
   const Y = 300;
-  w.note('## Publish one approved post\nCalled by the pipeline (auto mode) and the dashboard (approve / retry).\n**dry_run** simulates the Graph calls; otherwise: upload photo unpublished → create feed post (immediate or natively scheduled).\nFacebook errors are classified (expired token, rate limit, permissions, network) and raised as alerts.', [-60, -60], 700, 220, 4);
+  w.note('## Publish one approved post\nCalled by the pipeline (auto mode) and the dashboard (approve / retry). **dry_run** simulates the Graph calls and records them.\nLive: upload photo unpublished → create feed post (immediate or natively scheduled). Errors are classified (expired token, rate limit, permission, network) and raised as alerts.', [-40, -420], 980, 220, 4);
+  w.note('### Validate · log · route', [-40, -170], 1300, 420, 7);
+  w.note('### Facebook Graph API  (+ optional Instagram)', [1300, -170], 1640, 780, 7);
+  w.note('### Record outcome · alert · return', [-40, 680], 2980, 360, 7);
+  w.layout({
+    'When Called': [0, 60], 'Load Post': [220, 60], 'Prepare Publish': [440, 60], 'Skip?': [660, 60], 'Skipped': [880, -80],
+    'Log Publish Start': [880, 60], 'Dry Run?': [1100, 60], 'Simulate Publish': [1360, -80], 'Publish Route': [1360, 140],
+    'Read Image File': [1580, 40], 'FB Upload Photo': [1800, 40], 'FB Photo From URL': [1800, 240], 'Attach Media': [2020, 140],
+    'FB Create Post': [2240, 140], 'Normalize FB Response': [2460, 60], 'Get Permalink': [2680, 60], 'Add Permalink': [2680, 240],
+    'Classify FB Error': [2460, 300], 'Instagram?': [1580, 440], 'IG Photo URL': [1800, 440], 'IG Create Container': [2020, 440],
+    'IG Publish': [2240, 440], 'IG Result': [2460, 480],
+    'Outcome': [0, 860], 'Save Outcome': [260, 860], 'Close Publish Run': [520, 860], 'Has Alert?': [780, 860],
+    'Insert Alert': [1040, 780], 'Alert Webhook?': [1300, 780], 'Send Alert': [1560, 760], 'Result': [1820, 880],
+  });
   w.node('When Called', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, Y], { inputSource: 'passthrough' });
   w.node('Load Post', 'n8n-nodes-base.postgres', 2.6, [220, Y], pg(
     `SELECT p.*, (SELECT json_object_agg(key, value) FROM settings) AS settings FROM posts p WHERE p.id = $1`,
@@ -356,7 +387,7 @@ const publish = wf('publish', 'PW · 2 · Publish Post', (w) => {
     `UPDATE runs SET status = CASE WHEN $2 = 'publish_failed' THEN 'error' ELSE 'success' END,
        fb_post_id = $3, error = $4, details = $5::jsonb, finished_at = now()
      WHERE run_id = $1`,
-    "={{ [ $('Outcome').item.json.run_id, $('Outcome').item.json.status, $('Outcome').item.json.fb_post_id || null, $('Outcome').item.json.error || null, JSON.stringify({ status: $('Outcome').item.json.status, scheduled_for: $('Outcome').item.json.scheduled_for, route: $('Outcome').item.json.route, simulated_request: $('Outcome').item.json.simulated_request || null }) ] }}"), pgNode());
+    "={{ [ $('Outcome').item.json.run_id, $('Outcome').item.json.status, $('Outcome').item.json.fb_post_id || null, $('Outcome').item.json.error || null, JSON.stringify({ status: $('Outcome').item.json.status, post_text: $('Outcome').item.json.message, fb_permalink: $('Outcome').item.json.fb_permalink || null, scheduled_for: $('Outcome').item.json.scheduled_for, route: $('Outcome').item.json.route, simulated_request: $('Outcome').item.json.simulated_request || null }) ] }}"), pgNode());
   w.node('Has Alert?', 'n8n-nodes-base.if', 2.2, [4840, Y], boolIf("={{ !!$('Outcome').item.json.alert }}"));
   w.node('Insert Alert', 'n8n-nodes-base.postgres', 2.6, [5060, Y - 160], pg(
     `INSERT INTO alerts (severity, source, message, details) VALUES ($1, $2, $3, $4::jsonb) RETURNING id`,
@@ -419,7 +450,7 @@ const api = wf('api', 'PW · 3 · Dashboard API', (w) => {
                  p.post_text, p.hashtags, p.claims, p.guardrail, p.attempts, p.status, p.dry_run, p.scheduled_for,
                  p.fb_post_id, p.fb_permalink, p.ig_media_id, p.edited, p.reviewed_by, p.review_note, p.error,
                  p.created_at, p.updated_at, p.published_at, p.source_published_at,
-                 e.reactions, e.comments, e.shares, e.clicks, e.fetched_at AS engagement_at
+                 e.reactions, e.comments, e.shares, e.clicks, e.views, e.fetched_at AS engagement_at
           FROM posts p LEFT JOIN post_latest_engagement e ON e.post_id = p.id
           ORDER BY p.created_at DESC LIMIT 60) x),
       'runs', (SELECT coalesce(json_agg(r ORDER BY r.started_at DESC), '[]'::json) FROM (SELECT * FROM runs ORDER BY started_at DESC LIMIT 40) r),
@@ -523,7 +554,7 @@ const api = wf('api', 'PW · 3 · Dashboard API', (w) => {
 // 4. Engagement read-back
 // =====================================================================
 const engagement = wf('engagement', 'PW · 4 · Engagement Read-back', (w) => {
-  w.note('## Engagement read-back (every 6 h)\nSettles natively-scheduled posts whose time has passed, then stores a reactions / comments / shares / clicks snapshot next to each live post (last 30 days). Dry-run posts are skipped: there is nothing real to read.', [-60, -60], 640, 200, 4);
+  w.note('## Engagement read-back (every 6 h)\nSettles natively-scheduled posts whose time has passed, then stores a reactions / clicks / views snapshot (insights, pages_read_engagement), plus comments / shares when the token also has pages_read_user_content, next to each live post (last 30 days). Dry-run posts are skipped: there is nothing real to read.', [-60, -60], 640, 200, 4);
   w.node('Every 6 Hours', 'n8n-nodes-base.scheduleTrigger', 1.2, [0, 200], { rule: { interval: [{ field: 'hours', hoursInterval: 6 }] } });
   w.node('Manual Refresh', 'n8n-nodes-base.manualTrigger', 1, [0, 380]);
   w.node('From Dashboard', 'n8n-nodes-base.executeWorkflowTrigger', 1.1, [0, 560], { inputSource: 'passthrough' });
@@ -534,18 +565,24 @@ const engagement = wf('engagement', 'PW · 4 · Engagement Read-back', (w) => {
     `SELECT id, fb_post_id FROM posts
      WHERE status = 'published' AND dry_run = false AND fb_post_id IS NOT NULL AND published_at > now() - interval '30 days'
      ORDER BY published_at DESC`), pgNode({ executeOnce: true }));
-  w.node('Read Engagement', 'n8n-nodes-base.httpRequest', 4.2, [680, 380], {
-    url: "={{ 'https://graph.facebook.com/' + ($env.FB_GRAPH_VERSION || 'v24.0') + '/' + $json.fb_post_id }}",
+  w.node('Read Insights', 'n8n-nodes-base.httpRequest', 4.2, [680, 380], {
+    url: "={{ 'https://graph.facebook.com/' + ($env.FB_GRAPH_VERSION || 'v26.0') + '/' + $json.fb_post_id + '/insights' }}",
     sendQuery: true,
-    queryParameters: { parameters: [{ name: 'fields', value: 'reactions.summary(total_count),comments.summary(total_count),shares,insights.metric(post_clicks)' }, graphToken] },
+    queryParameters: { parameters: [{ name: 'metric', value: 'post_reactions_by_type_total,post_clicks,post_media_view' }, { name: 'period', value: 'lifetime' }, graphToken] },
     options: { batching: { batch: { batchSize: 5, batchInterval: 1000 } }, timeout: 20000 },
   }, { ...retry(2, 5000), onError: 'continueRegularOutput' });
-  w.node('Normalize Engagement', 'n8n-nodes-base.code', 2, [900, 380], code('ops/engagement-normalize.js'));
-  w.node('Store Snapshot', 'n8n-nodes-base.postgres', 2.6, [1120, 380], pg(
-    `INSERT INTO engagement (post_id, reactions, comments, shares, clicks, raw) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
-    '={{ [ $json.post_id, $json.reactions, $json.comments, $json.shares, $json.clicks, $json.raw ] }}'), pgNode());
+  w.node('Read Counts', 'n8n-nodes-base.httpRequest', 4.2, [900, 380], {
+    url: "={{ 'https://graph.facebook.com/' + ($env.FB_GRAPH_VERSION || 'v26.0') + '/' + $('Published Posts').item.json.fb_post_id }}",
+    sendQuery: true,
+    queryParameters: { parameters: [{ name: 'fields', value: 'reactions.summary(total_count),comments.summary(total_count),shares' }, graphToken] },
+    options: { batching: { batch: { batchSize: 5, batchInterval: 1000 } }, timeout: 20000 },
+  }, { onError: 'continueRegularOutput' });
+  w.node('Normalize Engagement', 'n8n-nodes-base.code', 2, [1120, 380], code('ops/engagement-normalize.js'));
+  w.node('Store Snapshot', 'n8n-nodes-base.postgres', 2.6, [1340, 380], pg(
+    `INSERT INTO engagement (post_id, reactions, comments, shares, clicks, views, raw) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+    '={{ [ $json.post_id, $json.reactions, $json.comments, $json.shares, $json.clicks, $json.views, $json.raw ] }}'), pgNode());
   ['Every 6 Hours', 'Manual Refresh', 'From Dashboard'].forEach((t) => w.link(t, 'Settle Scheduled'));
-  w.chain('Settle Scheduled', 'Published Posts', 'Read Engagement', 'Normalize Engagement', 'Store Snapshot');
+  w.chain('Settle Scheduled', 'Published Posts', 'Read Insights', 'Read Counts', 'Normalize Engagement', 'Store Snapshot');
 });
 
 // =====================================================================

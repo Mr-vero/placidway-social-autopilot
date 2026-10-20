@@ -6,9 +6,9 @@
   "nodes": [
     {
       "parameters": {
-        "content": "## PlacidWay → Facebook daily autopilot\nOne post per day. Triggers: schedule (07:00), manual, or the dashboard **Run now** button.\nErrors route to **PW · 5 · Error Handler** (dashboard alert + optional Slack/Discord webhook).",
+        "content": "## PlacidWay → Facebook daily autopilot\nOne guardrailed post per day. Triggers: **07:00 schedule**, **manual**, or the dashboard **Run now**.\nAny failure routes to **PW · 5 · Error Handler** → dashboard alert (+ optional Slack/Discord).",
         "height": 200,
-        "width": 560,
+        "width": 760,
         "color": 4
       },
       "id": "ff21c8e6-c306-4127-a0cc-9c898ba30cae",
@@ -16,15 +16,15 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        -80,
-        -40
+        -40,
+        -380
       ]
     },
     {
       "parameters": {
-        "content": "### ① Select\nSitemaps → drop used URLs → weekday content-type rotation → avoid repeating recent categories. 4 requests, 1.1 s apart (robots.txt-friendly).",
-        "height": 400,
-        "width": 1140,
+        "content": "### ① Select\nSitemaps → drop used URLs → weekday content-type rotation → category cool-down.\n4 requests, 1.1 s apart (robots.txt-friendly).",
+        "height": 540,
+        "width": 1620,
         "color": 7
       },
       "id": "c2dcd5d4-6dc4-47d0-a9ff-af2ef6ba306d",
@@ -32,72 +32,72 @@
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        640,
-        120
+        180,
+        -150
       ]
     },
     {
       "parameters": {
-        "content": "### ② Extract\nClaim the URL (UNIQUE constraint = never posts twice) → fetch one page → JSON-LD / OpenGraph / HTML fallback.",
-        "height": 400,
-        "width": 900,
+        "content": "### ② Extract\nClaim the URL first (DB UNIQUE = never posts twice) → fetch one page → JSON-LD › OpenGraph › HTML.",
+        "height": 540,
+        "width": 1060,
         "color": 7
       },
-      "id": "d0089534-da99-4052-adfc-b9cd76c549ce",
+      "id": "3975beef-0054-4c3c-a602-fb70ae398916",
       "name": "Note 3",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        1800,
-        120
+        1840,
+        -150
       ]
     },
     {
       "parameters": {
-        "content": "### ③ Generate + ④ Guardrails\nClaude writes structured parts (+ a source quote per line) → code assembles the post → deterministic rule checks → independent Claude reviewer → pass, retry with feedback, or escalate to a human.",
-        "height": 560,
-        "width": 1600,
-        "color": 6
+        "content": "### ③ Generate  +  ④ Guardrails\nClaude writes structured parts + a verbatim source quote per line → code assembles the post → deterministic rules → independent Claude reviewer → pass · retry with feedback · escalate to a human.",
+        "height": 380,
+        "width": 2720,
+        "color": 7
       },
-      "id": "f458912e-44fe-4a5b-a187-b3d58a1d0ba7",
+      "id": "3ebdbdf1-9cf9-4bf3-a3ca-50d8d4807bab",
       "name": "Note 4",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        2720,
-        120
+        180,
+        420
       ]
     },
     {
       "parameters": {
-        "content": "### ⑤ Image\nBrand the featured image, or render a branded card when none exists.",
-        "height": 640,
-        "width": 980,
+        "content": "### ⑤ Image\nSmart-crop + brand bar, or a rendered title card when there is no image.",
+        "height": 560,
+        "width": 1160,
         "color": 7
       },
-      "id": "f846e1bf-774b-4f1c-aaf8-c177036412ff",
+      "id": "9762d53f-1815-46ce-a2c6-e85683c0373b",
       "name": "Note 5",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        4340,
-        60
+        180,
+        840
       ]
     },
     {
       "parameters": {
-        "content": "### ⑥ Save, publish, log\nAuto mode publishes via **PW · 2 · Publish Post**; approval mode waits for the dashboard.",
-        "height": 400,
-        "width": 1460,
+        "content": "### ⑥ Save · publish · log\nAuto mode publishes via **PW · 2 · Publish Post**; approval mode waits for the dashboard.",
+        "height": 560,
+        "width": 1520,
         "color": 7
       },
-      "id": "e5d21253-64e0-4833-a792-4ad98b47c593",
+      "id": "41c71d86-e1aa-4826-a249-f6d18ac92edb",
       "name": "Note 6",
       "type": "n8n-nodes-base.stickyNote",
       "typeVersion": 1,
       "position": [
-        5340,
-        120
+        1380,
+        840
       ]
     },
     {
@@ -117,7 +117,7 @@
       "typeVersion": 1.2,
       "position": [
         0,
-        200
+        -40
       ]
     },
     {
@@ -128,7 +128,7 @@
       "typeVersion": 1,
       "position": [
         0,
-        380
+        120
       ]
     },
     {
@@ -141,7 +141,7 @@
       "typeVersion": 1.1,
       "position": [
         0,
-        560
+        280
       ]
     },
     {
@@ -154,7 +154,7 @@
       "typeVersion": 2,
       "position": [
         240,
-        380
+        120
       ]
     },
     {
@@ -169,7 +169,7 @@
       "typeVersion": 2.6,
       "position": [
         460,
-        380
+        120
       ],
       "credentials": {
         "postgres": {
@@ -192,7 +192,7 @@
       "typeVersion": 2.6,
       "position": [
         680,
-        300
+        120
       ],
       "credentials": {
         "postgres": {
@@ -211,7 +211,7 @@
       "typeVersion": 2,
       "position": [
         900,
-        300
+        120
       ]
     },
     {
@@ -252,7 +252,7 @@
       "typeVersion": 4.2,
       "position": [
         1120,
-        300
+        120
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -268,7 +268,7 @@
       "typeVersion": 2,
       "position": [
         1340,
-        300
+        120
       ]
     },
     {
@@ -282,7 +282,7 @@
           },
           "conditions": [
             {
-              "id": "b9e064cf-185e-43c5-9a61-a5494371f274",
+              "id": "bb0792b9-cfb8-4992-aad2-d7d10fa76b67",
               "leftValue": "={{ $json.found }}",
               "rightValue": "",
               "operator": {
@@ -303,7 +303,7 @@
       "typeVersion": 2.2,
       "position": [
         1560,
-        300
+        120
       ]
     },
     {
@@ -319,8 +319,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1780,
-        600
+        2120,
+        280
       ],
       "credentials": {
         "postgres": {
@@ -342,8 +342,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        1840,
-        300
+        1900,
+        120
       ],
       "credentials": {
         "postgres": {
@@ -364,7 +364,7 @@
           },
           "conditions": [
             {
-              "id": "297c3b29-fe88-4adc-9064-27d6c22cc0e8",
+              "id": "656965c2-6c11-4ba0-b0ac-971498b670e8",
               "leftValue": "={{ !!$json.id }}",
               "rightValue": "",
               "operator": {
@@ -384,8 +384,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        1840,
-        500
+        2120,
+        120
       ]
     },
     {
@@ -397,8 +397,8 @@
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
       "position": [
-        2060,
-        300
+        2340,
+        120
       ]
     },
     {
@@ -432,8 +432,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        2280,
-        300
+        2560,
+        120
       ],
       "retryOnFail": true,
       "maxTries": 3,
@@ -448,8 +448,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2500,
-        300
+        2780,
+        120
       ]
     },
     {
@@ -462,8 +462,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        2780,
-        300
+        260,
+        560
       ]
     },
     {
@@ -491,8 +491,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3000,
-        300
+        520,
+        560
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -508,8 +508,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3220,
-        300
+        780,
+        560
       ]
     },
     {
@@ -522,8 +522,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3440,
-        300
+        1040,
+        560
       ]
     },
     {
@@ -536,8 +536,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        3660,
-        300
+        1300,
+        560
       ]
     },
     {
@@ -565,8 +565,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        3880,
-        300
+        1560,
+        560
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -583,8 +583,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4100,
-        300
+        1820,
+        560
       ]
     },
     {
@@ -598,7 +598,7 @@
           },
           "conditions": [
             {
-              "id": "a16a0487-de61-478b-9ccd-15472a25d075",
+              "id": "9575c151-0a0f-4694-9e81-c55db4749d99",
               "leftValue": "={{ $json.route === 'retry' }}",
               "rightValue": "",
               "operator": {
@@ -618,7 +618,7 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        4100,
+        2080,
         560
       ]
     },
@@ -632,8 +632,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        4400,
-        300
+        260,
+        1080
       ]
     },
     {
@@ -647,8 +647,8 @@
       "type": "n8n-nodes-base.switch",
       "typeVersion": 3.2,
       "position": [
-        4620,
-        300
+        480,
+        1080
       ]
     },
     {
@@ -669,8 +669,8 @@
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
       "position": [
-        4840,
-        140
+        720,
+        980
       ],
       "retryOnFail": true,
       "maxTries": 2,
@@ -770,8 +770,8 @@
       "type": "n8n-nodes-base.editImage",
       "typeVersion": 1.1,
       "position": [
-        5060,
-        140
+        960,
+        980
       ]
     },
     {
@@ -902,8 +902,8 @@
       "type": "n8n-nodes-base.editImage",
       "typeVersion": 1.1,
       "position": [
-        5060,
-        360
+        960,
+        1200
       ]
     },
     {
@@ -918,8 +918,8 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        5200,
-        260
+        1200,
+        1080
       ]
     },
     {
@@ -932,8 +932,8 @@
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        5420,
-        300
+        1460,
+        1080
       ]
     },
     {
@@ -949,8 +949,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        5720,
-        300
+        1680,
+        1080
       ],
       "credentials": {
         "postgres": {
@@ -970,7 +970,7 @@
           },
           "conditions": [
             {
-              "id": "87a51830-8460-4d1e-b9e4-3acbc4a77f7e",
+              "id": "66c02dc3-ba92-4692-aea5-e9e3e5ec4a9f",
               "leftValue": "={{ $json.status === 'approved' }}",
               "rightValue": "",
               "operator": {
@@ -990,8 +990,8 @@
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
       "position": [
-        5940,
-        300
+        1900,
+        1080
       ]
     },
     {
@@ -1018,21 +1018,21 @@
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.2,
       "position": [
-        6160,
-        200
+        2120,
+        980
       ]
     },
     {
       "parameters": {
-        "jsCode": "// Finish Run: summarise the run for the runs table.\nconst ctx = $('Draft Record').item.json;\nconst pub = $input.first().json || {};\nconst published = pub.status === 'published' || pub.status === 'scheduled';\nconst status = ctx.status === 'needs_review' ? 'needs_review'\n  : pub.status === 'failed' ? 'error'\n  : 'success';\nreturn {\n  json: {\n    run_id: ctx.run.run_id,\n    status,\n    post_id: ctx.post_id,\n    fb_post_id: pub.fb_post_id || null,\n    error: pub.error || null,\n    details: JSON.stringify({\n      final_status: pub.status || ctx.status,\n      attempts: ctx.attempt,\n      guardrail_passed: ctx.guardrail.passed,\n      selection: ctx.selection,\n      title: ctx.source.title,\n      published,\n    }),\n  },\n};\n"
+        "jsCode": "// Finish Run: summarise the run for the runs table.\nconst ctx = $('Draft Record').item.json;\nconst pub = $input.first().json || {};\nconst published = pub.status === 'published' || pub.status === 'scheduled';\nconst status = ctx.status === 'needs_review' ? 'needs_review'\n  : pub.status === 'failed' ? 'error'\n  : 'success';\nreturn {\n  json: {\n    run_id: ctx.run.run_id,\n    status,\n    post_id: ctx.post_id,\n    fb_post_id: pub.fb_post_id || null,\n    error: pub.error || null,\n    details: JSON.stringify({\n      final_status: pub.status || ctx.status,\n      attempts: ctx.attempt,\n      guardrail_passed: ctx.guardrail.passed,\n      selection: ctx.selection,\n      title: ctx.source.title,\n      item_url: ctx.source.url,\n      content_type: ctx.source.type,\n      post_text: ctx.post.text,\n      fb_permalink: pub.fb_permalink || null,\n      published,\n    }),\n  },\n};\n"
       },
       "id": "c7737acb-1786-4deb-a9be-6b1613f3e7c4",
       "name": "Finish Run",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
-        6380,
-        300
+        2340,
+        1080
       ]
     },
     {
@@ -1048,8 +1048,8 @@
       "type": "n8n-nodes-base.postgres",
       "typeVersion": 2.6,
       "position": [
-        6600,
-        300
+        2560,
+        1080
       ],
       "credentials": {
         "postgres": {

@@ -99,11 +99,12 @@ CREATE TABLE engagement (
   comments    int,
   shares      int,
   clicks      int,
+  views       int,                            -- post_media_view (insights)
   raw         jsonb,
   fetched_at  timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX engagement_post_idx ON engagement (post_id, fetched_at DESC);
 
 CREATE VIEW post_latest_engagement AS
-SELECT DISTINCT ON (post_id) post_id, reactions, comments, shares, clicks, fetched_at
+SELECT DISTINCT ON (post_id) post_id, reactions, comments, shares, clicks, views, fetched_at
 FROM engagement ORDER BY post_id, fetched_at DESC;

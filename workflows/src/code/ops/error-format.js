@@ -7,7 +7,7 @@ const node = exec.lastNodeExecuted || (err.node && err.node.name) || 'unknown no
 const msg = String(err.message || 'Unknown error').slice(0, 500);
 
 let hint = '';
-if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|5\d\d|timeout/i.test(msg) && /sitemap|page/i.test(node)) hint = 'PlacidWay looks unreachable: will retry on the next schedule.';
+if (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|cannot be established|5\d\d|timeout/i.test(msg) && /sitemap|page/i.test(node)) hint = 'PlacidWay looks unreachable: will retry on the next schedule.';
 else if (/Claude|bridge|8787/i.test(node + msg)) hint = 'LLM bridge unreachable: is `npm run bridge` running on the host?';
 else if (/thin|markup/i.test(msg)) hint = 'Page structure changed: review the extractor.';
 

@@ -165,12 +165,28 @@ Why both: rules can't judge paraphrase or implication, and an LLM can be talked 
 - **Auto:** clean drafts publish immediately. Flagged drafts still stop for a human.
 
 ### 8. Logging, retries, alerts
-- **Every execution** writes to `runs`: item chosen, post text (in `posts`), FB post id, status, error and details. The dashboard's **Run log** tab shows it with an expandable JSON view.
+- **Every execution** writes to `runs`: item chosen (URL + title), the **final post text**, the Facebook post id and permalink, status, error, and details such as the selection reason and attempts. In dry run it also records the exact Graph calls. The dashboard's **Run log** tab shows it with an expandable JSON view.
 - **Retries:** PlacidWay fetches 3× / 5 s, LLM calls 2× / 8 s, Facebook calls 3× / 10 s, and the bridge queues requests with a concurrency limit.
 - **Facebook errors are classified:** code 190 is an expired token ("generate a new long-lived Page token…"), 4/17/32/613 are rate limits, 10/200 are permissions, 5xx/timeouts are network. The post becomes `publish_failed` with a **Retry publish** button.
 - **Never silent:** every workflow names **PW · 5 · Error Handler** as its error workflow. A crash anywhere (site down, markup change, bridge down) creates a dashboard alert with a hint, marks the run `error`, releases the half-drafted URL, and optionally posts to `ALERT_WEBHOOK_URL` (Slack- or Discord-compatible).
 
 ---
+
+## Verified live (not just designed)
+
+Every row below was exercised against the running stack with real PlacidWay pages. Rows not marked *dry run* used the real Facebook Graph API (v26.0):
+
+| Scenario | How it was tested | Result |
+|---|---|---|
+| End-to-end publish | Dashboard approve → **PW · 2** → `photos` + `feed` | Post with branded image on the test Page; `is_published: true`, permalink stored |
+| Auto mode *(dry run)* | `publish_mode=auto` → Run now | Clean draft went straight to the publish workflow with no human step |
+| Native scheduling *(dry run)* | `post_time=18:30` → approve | Next-slot maths correct (11:30 UTC = 18:30 WIB); `scheduled_publish_time` payload recorded. Not yet sent to Facebook live |
+| Guardrail retry | Real runs | Number rule caught "10 to 14 days" vs source "ten to fourteen"; reviewer caught an unsupported claim; both rewritten and passed |
+| Human edit bypass | `POST /api/action` with "miracle… 100% safe" | `422`, post unchanged |
+| Expired/invalid token | Real Graph call with a bad token | Code 190 → "Page token invalid or expired" alert → **Retry publish** succeeded after the fix |
+| PlacidWay down | `PW_BASE_URL` pointed at an unresolvable host | 3 retries → run `error` → alert "PlacidWay looks unreachable" |
+| LLM down | Bridge stopped mid-run | Alert "LLM bridge unreachable", half-drafted URL released, and **picked up again** by the next run |
+| Engagement | Live post | Insights snapshot stored; missing `pages_read_user_content` handled gracefully |
 
 ## Stretch goals
 
@@ -178,9 +194,9 @@ Why both: rules can't judge paraphrase or implication, and an LLM can be talked 
 |---|---|
 | Variety rules | ✅ Weekday content-type rotation + treatment-category cool-down, both editable in the dashboard |
 | Image handling | ✅ Full-bleed 1200×630 smart crop via PlacidWay's Cloudflare image endpoint, plus a PlacidWay brand bar (n8n Edit Image / GraphicsMagick). When there's no image, a branded title card is **rendered**. If the image download fails, it falls back to the card |
-| Cross-posting | ✅ Instagram (behind `crosspost_instagram` + `IG_USER_ID`): re-uses the FB-hosted photo URL → `/media` → `/media_publish`. It's best effort: an IG failure raises a warning but never fails the FB post |
+| Cross-posting | 🟡 Instagram is built (behind `crosspost_instagram` + `IG_USER_ID`): it re-uses the FB-hosted photo URL → `/media` → `/media_publish`, and an IG failure raises a warning but never fails the FB post. **Not verified live**: it needs an Instagram Business account linked to the test Page |
 | Dashboard | ✅ `http://localhost:8080`: review queue, posts gallery with engagement, week view, run log, settings, alerts, dark mode |
-| Engagement read-back | ✅ Every 6 h: reactions, comments, shares, `post_clicks` snapshots stored next to each post (live posts only; dry-run posts have nothing real to read) |
+| Engagement read-back | ✅ Every 6 h, **verified live**: reactions (`post_reactions_by_type_total`), clicks and media views from post insights (needs only `pages_read_engagement`), stored as snapshots next to each post. Comments and shares are read too once the token also has `pages_read_user_content`, which Graph v26 requires for those fields. Failed reads are skipped, never stored as zeros |
 
 ---
 
@@ -201,7 +217,7 @@ Why both: rules can't judge paraphrase or implication, and an LLM can be talked 
 | `LLM_BACKEND` | `cli` | `cli` = your `claude` login · `api` = Anthropic Messages API |
 | `LLM_MODEL_WRITER` / `LLM_MODEL_REVIEWER` | `sonnet` / `haiku` | Model aliases |
 | `ANTHROPIC_API_KEY` | (none) | Only for `LLM_BACKEND=api` |
-| `FB_GRAPH_VERSION` | `v24.0` | Graph API version |
+| `FB_GRAPH_VERSION` | `v26.0` | Graph API version |
 | `FB_PAGE_ID` / `FB_PAGE_ACCESS_TOKEN` | (none) | Your **test** Page. Not needed in dry run |
 | `IG_USER_ID` | (none) | Instagram Business account linked to the Page |
 | `ALERT_WEBHOOK_URL` | (none) | Optional Slack/Discord incoming webhook |

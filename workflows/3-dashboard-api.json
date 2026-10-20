@@ -1,0 +1,909 @@
+{
+  "id": "pwDashboardApi01",
+  "name": "PW · 3 · Dashboard API",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Dashboard API\nServed at **/api/** by the nginx dashboard container, which injects the shared `x-pw-token` header.\n`GET /api/state` → everything the dashboard renders.\n`POST /api/action` → approve · retry · reject · settings · run · ack · engagement.\nHuman approvals are re-checked against the hard guardrail rules (an edit cannot sneak in a medical claim).",
+        "height": 240,
+        "width": 760,
+        "color": 4
+      },
+      "id": "7264fa9d-f702-45bb-a6dc-339909634bf0",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "pw/state",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "ff62e0d6-8329-47b2-a6c6-7c0857373770",
+      "name": "GET /state",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        260
+      ],
+      "webhookId": "01145eda-783e-4fe3-a23f-ca24ce355ee3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1a5ec6b-3c58-4782-b83c-a8614eabc27f",
+              "leftValue": "={{ $json.headers['x-pw-token'] === $env.PW_API_TOKEN && !!$env.PW_API_TOKEN }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "aa4cf9da-0c34-4e6d-a167-17420013bcea",
+      "name": "Authorized?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT json_build_object(\n      'settings', (SELECT json_object_agg(key, json_build_object('value', value, 'description', description, 'updated_at', updated_at)) FROM settings),\n      'counts', (SELECT coalesce(json_object_agg(status, n), '{}'::json) FROM (SELECT status, count(*) n FROM posts GROUP BY status) c),\n      'posts', (SELECT coalesce(json_agg(x ORDER BY x.created_at DESC), '[]'::json) FROM (\n          SELECT p.id, p.source_url, p.content_type, p.category, p.title, p.summary, p.image_url, p.media_path, p.source_excerpt,\n                 p.post_text, p.hashtags, p.claims, p.guardrail, p.attempts, p.status, p.dry_run, p.scheduled_for,\n                 p.fb_post_id, p.fb_permalink, p.ig_media_id, p.edited, p.reviewed_by, p.review_note, p.error,\n                 p.created_at, p.updated_at, p.published_at, p.source_published_at,\n                 e.reactions, e.comments, e.shares, e.clicks, e.fetched_at AS engagement_at\n          FROM posts p LEFT JOIN post_latest_engagement e ON e.post_id = p.id\n          ORDER BY p.created_at DESC LIMIT 60) x),\n      'runs', (SELECT coalesce(json_agg(r ORDER BY r.started_at DESC), '[]'::json) FROM (SELECT * FROM runs ORDER BY started_at DESC LIMIT 40) r),\n      'alerts', (SELECT coalesce(json_agg(a ORDER BY a.created_at DESC), '[]'::json) FROM (SELECT * FROM alerts WHERE NOT acknowledged ORDER BY created_at DESC LIMIT 20) a),\n      'server_time', now(),\n      'env', json_build_object('fb_configured', $1::boolean, 'ig_configured', $2::boolean, 'tz', $3::text, 'llm_backend', $4::text,\n                               'writer_model', $5::text, 'reviewer_model', $6::text)\n    ) AS state",
+        "options": {
+          "queryReplacement": "={{ [ !!($env.FB_PAGE_ID && $env.FB_PAGE_ACCESS_TOKEN), !!$env.IG_USER_ID, $env.GENERIC_TIMEZONE || 'UTC', $env.LLM_BACKEND || 'cli', $env.LLM_MODEL_WRITER || 'sonnet', $env.LLM_MODEL_REVIEWER || 'haiku' ] }}"
+        }
+      },
+      "id": "8c7c1c51-bd06-49db-a51b-35bac01ac5a7",
+      "name": "Load Dashboard",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        180
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.state) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "a0acadc9-9097-42eb-a3ad-d407f6b602c3",
+      "name": "Respond State",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        660,
+        180
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":false,\"error\":\"unauthorized\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "f51e33e1-8e07-466f-a4ec-4087159e2591",
+      "name": "Respond 401",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pw/action",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "dd1dfcb4-587e-4892-a4ec-c92271c304a7",
+      "name": "POST /action",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        700
+      ],
+      "webhookId": "cf76cf89-2deb-4e16-a9b4-8269515bad71"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e1a5ec6b-3c58-4782-b83c-a8614eabc27f",
+              "leftValue": "={{ $json.headers['x-pw-token'] === $env.PW_API_TOKEN && !!$env.PW_API_TOKEN }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "6994da9c-07b8-45fb-a788-9ab28c7dbc7a",
+      "name": "Authorized? ",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        220,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":false,\"error\":\"unauthorized\"}",
+        "options": {
+          "responseCode": 401
+        }
+      },
+      "id": "1c1d090d-3a3a-4bd2-ac69-5e038acd3daf",
+      "name": "Respond 401 ",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        860
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Route Action: normalise the dashboard request.\nconst req = $('POST /action').first().json;\nconst body = req.body || {};\nconst ALLOWED = ['approve', 'reject', 'settings', 'run', 'ack', 'retry', 'engagement'];\nconst action = String(body.action || '');\nif (!ALLOWED.includes(action)) return { json: { action: 'invalid', error: `Unknown action \"${action}\"` } };\nreturn {\n  json: {\n    action,\n    trigger: 'dashboard',\n    id: body.id != null ? Number(body.id) : null,\n    post_text: typeof body.post_text === 'string' ? body.post_text : null,\n    note: typeof body.note === 'string' ? body.note.slice(0, 500) : null,\n    reviewer: String(body.reviewer || 'dashboard').slice(0, 60),\n    settings: body.settings && typeof body.settings === 'object' ? body.settings : {},\n    force_type: body.force_type || null,\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "4f6a558f-76df-4cbf-a26c-1b0ba30ed7dc",
+      "name": "Route Action",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 7,
+        "output": "={{ ({ approve: 0, retry: 0, reject: 1, settings: 2, run: 3, ack: 4, engagement: 5 })[$json.action] ?? 6 }}"
+      },
+      "id": "834e82f6-ebd4-4672-a79a-a2548c291884",
+      "name": "Action",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        660,
+        700
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, status, post_text, source_url, source_excerpt, claims FROM posts WHERE id = $1",
+        "options": {
+          "queryReplacement": "={{ [ $json.id ] }}"
+        }
+      },
+      "id": "33529bc3-6380-4a7a-afd5-228d688613ab",
+      "name": "Load For Approval",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        900,
+        400
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Approval: a human approval still has to pass the hard rules.\n// If the reviewer edited the text, the edit is re-checked; the LLM review stays advisory.\n// ---- inlined from lib/guardrails.js ----\n// Shared: post assembly + deterministic guardrails.\n// Used by the pipeline (after generation) and by the dashboard API (when a\n// reviewer edits a draft), so a human edit is held to the same rules.\n\nconst BODY_LIMIT = 500; // characters before the link, per the brief\n\nfunction buildLink(url, utm) {\n  if (!utm) return url;\n  return url + (url.includes('?') ? '&' : '?') + utm;\n}\n\nfunction cleanTag(t) {\n  const core = String(t || '').replace(/^#+/, '').replace(/[^\\p{L}\\p{N}]+/gu, '');\n  return core ? `#${core}` : null;\n}\n\nfunction assemblePost(gen, sourceUrl, utm) {\n  const hook = String(gen.hook || '').trim();\n  const lines = (gen.lines || []).map((l) => String(l).trim().replace(/^[-•*✅▸]\\s*/, '')).filter(Boolean);\n  const cta = String(gen.cta || '').trim();\n  const hashtags = [...new Set((gen.hashtags || []).map(cleanTag).filter(Boolean))];\n  const link = buildLink(sourceUrl, utm);\n  const body = [hook, '', ...lines.map((l) => `• ${l}`), '', cta].join('\\n');\n  const text = `${body}\\n👉 ${link}\\n\\n${hashtags.join(' ')}`;\n  return { hook, lines, cta, hashtags, link, body, text, body_chars: [...body].length };\n}\n\n// Split an edited full post back into parts so edits get the same checks.\nfunction parsePostText(text, sourceUrl) {\n  const t = String(text || '');\n  const linkMatch = t.match(/https?:\\/\\/\\S+/);\n  const link = linkMatch ? linkMatch[0] : '';\n  const idx = linkMatch ? t.indexOf(link) : t.length;\n  const body = t.slice(0, idx).replace(/👉\\s*$/u, '').trimEnd();\n  const after = t.slice(idx + link.length);\n  const hashtags = (after.match(/#[\\p{L}\\p{N}_]+/gu) || []);\n  const parts = body.split('\\n').map((s) => s.trim()).filter(Boolean);\n  const hook = parts[0] || '';\n  const bulletLines = parts.filter((p) => /^[•\\-*✅▸]/.test(p)).map((p) => p.replace(/^[•\\-*✅▸]\\s*/, ''));\n  const cta = parts.length > 1 ? parts[parts.length - 1] : '';\n  return { hook, lines: bulletLines, cta, hashtags, link, body, text: t, body_chars: [...body].length, source_url: sourceUrl };\n}\n\n// Medical-claim language that must never appear, regardless of source wording.\nconst BANNED = [\n  [/\\bcur(e|es|ed|ing)\\b/i, 'promises a cure'],\n  [/\\bguarantee(d|s)?\\b/i, 'guarantees an outcome'],\n  [/\\b100\\s?%/i, 'absolute (100%) claim'],\n  [/\\brisk[- ]?free\\b|\\bno risks?\\b|\\bzero risk\\b/i, 'claims no risk'],\n  [/\\bno side[- ]effects?\\b|\\bwithout side[- ]effects?\\b/i, 'claims no side effects'],\n  [/\\bpainless\\b|\\bpain[- ]free\\b/i, 'claims painless treatment'],\n  [/\\bpermanent(ly)?\\s+(results?|fix|solution|cure)\\b/i, 'promises permanent results'],\n  [/\\bmiracle|\\bmiraculous\\b/i, 'miracle language'],\n  [/\\b(clinically\\s+)?proven\\b/i, '\"proven\" efficacy claim'],\n  [/\\brevers(e|es|ed|ing)\\b/i, 'claims to reverse a condition'],\n  [/\\b(eliminate|eradicate)s?\\b/i, 'claims to eliminate a condition'],\n  [/\\bheal(s|ed)?\\s+(your|the|any)\\b/i, 'claims to heal'],\n  [/\\b(completely|totally|perfectly|100%)\\s+safe\\b/i, 'absolute safety claim'],\n  [/\\bfda[- ]approved\\b/i, 'regulatory approval claim'],\n  [/\\binstant(ly)?\\s+results?\\b/i, 'instant results claim'],\n  [/\\bwill\\s+(fix|cure|restore|transform)\\b/i, 'promises an outcome'],\n];\n\nconst NEGATION = /\\b(not|no|never|without|isn't|aren't|doesn't|don't|cannot|can't|nor)\\b|n't\\b/;\n\n// Superlatives allowed only if the source itself uses them.\nconst SUPERLATIVES = /\\b(best|#1|number one|top[- ]rated|world[- ]class|leading|cheapest|lowest price)\\b/gi;\n\nconst norm = (s) => String(s || '').toLowerCase().replace(/[‘’]/g, \"'\").replace(/[“”]/g, '\"')\n  .replace(/[^\\p{L}\\p{N}%$.,'\\s]/gu, ' ').replace(/\\s+/g, ' ').trim();\n\n// Numbers as they appear in prose: 1,200 / 82% / 3.5 / 2025 -> canonical digits.\nfunction numbersIn(text) {\n  const found = String(text || '').match(/\\d[\\d,]*(\\.\\d+)?/g) || [];\n  return found.map((n) => n.replace(/,/g, '').replace(/\\.0+$/, '')).filter((n) => n.length > 0);\n}\n\nfunction quoteSupported(quote, sourceNorm) {\n  const q = norm(quote);\n  if (!q) return false;\n  if (sourceNorm.includes(q)) return true;\n  // Tolerate small edits (punctuation, a dropped word): 4-word shingle overlap.\n  const w = q.split(' ');\n  if (w.length < 4) return sourceNorm.includes(q);\n  let hit = 0, total = 0;\n  for (let i = 0; i + 4 <= w.length; i++) { total++; if (sourceNorm.includes(w.slice(i, i + 4).join(' '))) hit++; }\n  return total > 0 && hit / total >= 0.6;\n}\n\nfunction runRuleChecks(post, source, claims) {\n  const excerpt = source.excerpt || '';\n  const sourceNorm = norm(excerpt);\n  const sourceNums = new Set(numbersIn(excerpt));\n  const checks = [];\n  const add = (id, label, pass, detail) => checks.push({ id, label, pass: !!pass, detail: detail || '' });\n\n  add('structure', 'Hook, 2–4 value lines and a CTA',\n    post.hook && post.cta && post.lines.length >= 2 && post.lines.length <= 4,\n    `hook=${post.hook ? 'yes' : 'no'}, lines=${post.lines.length}, cta=${post.cta ? 'yes' : 'no'}`);\n\n  add('length', `Under ${BODY_LIMIT} characters before the link`, post.body_chars < BODY_LIMIT, `${post.body_chars} chars`);\n\n  const badTags = post.hashtags.filter((h) => !/^#[\\p{L}\\p{N}]{2,40}$/u.test(h));\n  add('hashtags', '3–5 well-formed hashtags',\n    post.hashtags.length >= 3 && post.hashtags.length <= 5 && badTags.length === 0,\n    `${post.hashtags.length} tags${badTags.length ? `; malformed: ${badTags.join(' ')}` : ''}`);\n\n  const linkOk = post.link && post.link.split('?')[0].replace(/\\/$/, '') === String(source.url).split('?')[0].replace(/\\/$/, '');\n  add('link', 'Links to the exact source page', linkOk, post.link || 'missing');\n\n  const prose = `${post.hook}\\n${post.lines.join('\\n')}\\n${post.cta}`;\n  const bannedHits = [];\n  for (const [re, why] of BANNED) {\n    const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');\n    for (const m of prose.matchAll(g)) {\n      // Cautionary phrasing (\"is not proven\", \"no guarantee of results\") is the compliant way\n      // to talk about evidence, so a negation just before the term clears it.\n      const before = prose.slice(Math.max(0, m.index - 28), m.index).toLowerCase();\n      if (NEGATION.test(before)) continue;\n      bannedHits.push(`${why} (\"${m[0]}\")`);\n      break;\n    }\n  }\n  add('medical_claims', 'No medical claims or outcome promises', bannedHits.length === 0, bannedHits.join('; ') || 'clean');\n\n  const supers = [...new Set((prose.match(SUPERLATIVES) || []).map((s) => s.toLowerCase()))]\n    .filter((s) => !sourceNorm.includes(s));\n  add('superlatives', 'No unsupported superlatives', supers.length === 0, supers.join(', ') || 'clean');\n\n  const unknownNums = [...new Set(numbersIn(prose))].filter((n) => !sourceNums.has(n));\n  add('numbers', 'Every number appears in the source', unknownNums.length === 0,\n    unknownNums.length ? `not in source: ${unknownNums.join(', ')}` : `${numbersIn(prose).length} numbers verified`);\n\n  const priceRe = /(?:[$€£]|\\b(?:usd|eur|gbp|mxn|cad|aud)\\b)\\s?\\d[\\d,.]*|\\d[\\d,.]*\\s?(?:usd|eur|gbp|mxn|dollars|euros)\\b/gi;\n  const prices = prose.match(priceRe) || [];\n  const badPrices = prices.filter((p) => numbersIn(p).some((n) => !sourceNums.has(n)));\n  add('prices', 'No invented prices', badPrices.length === 0,\n    prices.length ? (badPrices.length ? `not in source: ${badPrices.join(', ')}` : `${prices.join(', ')} found in source`) : 'no prices mentioned');\n\n  if (claims) {\n    const unsupported = (claims || []).filter((c) => !quoteSupported(c.source_quote, sourceNorm));\n    const covered = claims.length >= post.lines.length;\n    add('grounding', 'Each value line is backed by a verbatim source quote',\n      covered && unsupported.length === 0,\n      !covered ? `${claims.length} quotes for ${post.lines.length} lines`\n        : unsupported.length ? `quote not found in source: \"${unsupported[0].source_quote.slice(0, 80)}\"` : `${claims.length}/${claims.length} quotes located in source`);\n  }\n\n  return { pass: checks.every((c) => c.pass), checks };\n}\n// ---- end lib/guardrails.js ----\nconst req = $('Route Action').item.json;\nconst row = $json;\nif (!row || !row.id) return { json: { ok: false, code: 404, error: 'Post not found' } };\nif (!['pending_approval', 'needs_review', 'publish_failed', 'approved'].includes(row.status)) {\n  return { json: { ok: false, code: 409, error: `Post is already \"${row.status}\"` } };\n}\nconst text = req.post_text != null ? req.post_text.trim() : row.post_text;\nconst edited = req.post_text != null && text !== row.post_text;\nconst parsed = parsePostText(text, row.source_url);\nconst rules = runRuleChecks(parsed, { excerpt: row.source_excerpt, url: row.source_url }, edited ? null : row.claims);\nif (!rules.pass) {\n  return { json: { ok: false, code: 422, error: 'Post fails guardrails: edit the text to fix the flagged items', rules } };\n}\nreturn { json: { ok: true, id: row.id, post_text: text, edited, reviewer: req.reviewer, rules } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "f02e983d-809c-4649-a7aa-3c909185faea",
+      "name": "Check Approval",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "e0b1e6e3-af94-46d8-a3f7-d70e560b3c7d",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "680a3c2b-0ee3-4beb-a306-53afe33ebb92",
+      "name": "Approval OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1340,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE posts SET status = 'approved', post_text = $2, edited = edited OR $3::boolean, reviewed_by = $4, updated_at = now()\n     WHERE id = $1 RETURNING id AS post_id, 'approval' AS trigger",
+        "options": {
+          "queryReplacement": "={{ [ $json.id, $json.post_text, $json.edited, $json.reviewer ] }}"
+        }
+      },
+      "id": "21f16f60-20d5-4d91-a149-1d755201353a",
+      "name": "Mark Approved",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1560,
+        320
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "pwPublishPost001",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "9e68d206-5dce-46aa-a8dd-5638ea6397c4",
+      "name": "Publish Approved",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        1780,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: $json.status !== 'publish_failed', result: $json }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "3a271ffd-f264-4cfb-a493-f0242fb4fb8d",
+      "name": "Respond Published",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        2000,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {
+          "responseCode": "={{ $json.code || 400 }}"
+        }
+      },
+      "id": "b7eb3efa-b723-4fe0-ad2d-d344b3b1c49a",
+      "name": "Respond Blocked",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1560,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE posts SET status = 'rejected', review_note = $2, reviewed_by = $3, updated_at = now()\n     WHERE id = $1 AND status IN ('pending_approval', 'needs_review', 'publish_failed') RETURNING id, status",
+        "options": {
+          "queryReplacement": "={{ [ $json.id, $json.note, $json.reviewer ] }}"
+        }
+      },
+      "id": "e95fc815-dd14-4287-ad5f-283a36796852",
+      "name": "Mark Rejected",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        900,
+        600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: !!$json.id, result: $json }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "74916a0d-5c91-4afb-a989-6e0248ea5f7d",
+      "name": "Respond Rejected",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        600
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate Settings: whitelist keys and values before writing.\nconst s = $('Route Action').item.json.settings;\nconst rules = {\n  publish_mode: (v) => ['approval', 'auto'].includes(v),\n  dry_run: (v) => ['true', 'false'].includes(v),\n  post_time: (v) => v === 'now' || /^([01]?\\d|2[0-3]):[0-5]\\d$/.test(v),\n  brand_images: (v) => ['true', 'false'].includes(v),\n  crosspost_instagram: (v) => ['true', 'false'].includes(v),\n  max_attempts: (v) => /^[1-5]$/.test(v),\n  avoid_recent_categories: (v) => /^[0-9]$/.test(v),\n  rotation: (v) => { try { const o = JSON.parse(v); return Object.keys(o).every((k) => /^[0-6]$/.test(k) && ['article', 'package', 'answer', 'news'].includes(o[k])); } catch (e) { return false; } },\n};\nconst out = [];\nconst rejected = [];\nfor (const [k, raw] of Object.entries(s)) {\n  const v = typeof raw === 'object' ? JSON.stringify(raw) : String(raw);\n  if (rules[k] && rules[k](v)) out.push({ json: { key: k, value: v } });\n  else rejected.push(k);\n}\nif (!out.length) return [{ json: { key: null, rejected } }];\nreturn out;\n"
+      },
+      "id": "0c4c72d4-a6d8-4493-a9ee-634b9af870c5",
+      "name": "Validate Settings",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE settings SET value = $2, updated_at = now() WHERE key = $1 RETURNING key, value",
+        "options": {
+          "queryReplacement": "={{ [ $json.key, $json.value ] }}"
+        }
+      },
+      "id": "c4134bea-0ef2-4c89-a145-0403cae2577a",
+      "name": "Save Settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        760
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: true, saved: $input.all().map(i => i.json.key).filter(Boolean) }) }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "f8f541dd-5c9f-4bf4-a1b6-ac3957e712e4",
+      "name": "Respond Settings",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1340,
+        760
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "pwDailyPipeline1",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "id": "e32282ca-f2d7-4c0f-ad50-4d6497cedc7b",
+      "name": "Start Pipeline",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        920
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true,\"started\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "6575e9ed-e612-45e9-a718-285cb5fd200a",
+      "name": "Respond Started",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        920
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE alerts SET acknowledged = true WHERE ($1::int IS NULL OR id = $1::int) AND NOT acknowledged RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.id ] }}"
+        }
+      },
+      "id": "d5d8ba75-3347-4ce9-ac59-a23b91a00ce8",
+      "name": "Ack Alerts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        900,
+        1080
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "6bc7655b-25b6-4919-a55c-73c45744a46c",
+      "name": "Respond Acked",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        1080
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "pwEngagement0001",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "58d8442f-52dc-4789-a476-9dab299074b2",
+      "name": "Refresh Engagement",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        1240
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "{\"ok\":true}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "id": "3ba3b553-5017-4587-af48-9e1715d6db84",
+      "name": "Respond Refreshed",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        1240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({ ok: false, error: $json.error || 'bad request' }) }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "9222e61d-9cee-45f7-aa2c-979cf073384b",
+      "name": "Respond 400",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        900,
+        1400
+      ]
+    }
+  ],
+  "connections": {
+    "GET /state": {
+      "main": [
+        [
+          {
+            "node": "Authorized?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authorized?": {
+      "main": [
+        [
+          {
+            "node": "Load Dashboard",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Respond State",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "POST /action": {
+      "main": [
+        [
+          {
+            "node": "Authorized? ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Authorized? ": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 401 ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action": {
+      "main": [
+        [
+          {
+            "node": "Load For Approval",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Mark Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Validate Settings",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Start Pipeline",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Ack Alerts",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Refresh Engagement",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load For Approval": {
+      "main": [
+        [
+          {
+            "node": "Check Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Approval": {
+      "main": [
+        [
+          {
+            "node": "Approval OK?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approval OK?": {
+      "main": [
+        [
+          {
+            "node": "Mark Approved",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond Blocked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Approved": {
+      "main": [
+        [
+          {
+            "node": "Publish Approved",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Approved": {
+      "main": [
+        [
+          {
+            "node": "Respond Published",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark Rejected": {
+      "main": [
+        [
+          {
+            "node": "Respond Rejected",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Settings": {
+      "main": [
+        [
+          {
+            "node": "Save Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Settings": {
+      "main": [
+        [
+          {
+            "node": "Respond Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Pipeline": {
+      "main": [
+        [
+          {
+            "node": "Respond Started",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ack Alerts": {
+      "main": [
+        [
+          {
+            "node": "Respond Acked",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Refresh Engagement": {
+      "main": [
+        [
+          {
+            "node": "Respond Refreshed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "pwErrorHandler01"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "21805d19-b9c7-44f1-a893-279c7317cd5f"
+}

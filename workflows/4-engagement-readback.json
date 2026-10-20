@@ -1,0 +1,280 @@
+{
+  "id": "pwEngagement0001",
+  "name": "PW · 4 · Engagement Read-back",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Engagement read-back (every 6 h)\nSettles natively-scheduled posts whose time has passed, then stores a reactions / comments / shares / clicks snapshot next to each live post (last 30 days). Dry-run posts are skipped: there is nothing real to read.",
+        "height": 200,
+        "width": 640,
+        "color": 4
+      },
+      "id": "0cea7622-6ad0-43a4-a8b4-4fc5c81ae01f",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "ef3829d0-eaa9-4c04-a145-f612ea4d38d5",
+      "name": "Every 6 Hours",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "d32e5e8b-7883-47b5-ad6f-3547f73513ef",
+      "name": "Manual Refresh",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "20621d89-ad62-4cc0-a67d-db40ede3f6bf",
+      "name": "From Dashboard",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE posts SET status = 'published', published_at = scheduled_for, updated_at = now()\n     WHERE status = 'scheduled' AND scheduled_for <= now() RETURNING id",
+        "options": {}
+      },
+      "id": "5c22105b-ba8c-43c9-a1a9-93e4d54c3037",
+      "name": "Settle Scheduled",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        240,
+        380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true,
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id, fb_post_id FROM posts\n     WHERE status = 'published' AND dry_run = false AND fb_post_id IS NOT NULL AND published_at > now() - interval '30 days'\n     ORDER BY published_at DESC",
+        "options": {}
+      },
+      "id": "63ab4c8d-1dfa-496e-a0dc-e388b8d42543",
+      "name": "Published Posts",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        460,
+        380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "url": "={{ 'https://graph.facebook.com/' + ($env.FB_GRAPH_VERSION || 'v24.0') + '/' + $json.fb_post_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "reactions.summary(total_count),comments.summary(total_count),shares,insights.metric(post_clicks)"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 5,
+              "batchInterval": 1000
+            }
+          },
+          "timeout": 20000
+        }
+      },
+      "id": "4c2362ef-ba70-4799-ac20-cd6414f37ac8",
+      "name": "Read Engagement",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        680,
+        380
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize Engagement: Graph fields -> one snapshot row per post.\nconst posts = $('Published Posts').all();\nreturn $input.all().map((it, i) => {\n  const r = it.json || {};\n  const post = posts[i] ? posts[i].json : {};\n  const clicks = (((r.insights || {}).data || []).find((d) => d.name === 'post_clicks') || {}).values;\n  return {\n    json: {\n      post_id: post.id,\n      ok: !r.error,\n      reactions: r.reactions && r.reactions.summary ? r.reactions.summary.total_count : null,\n      comments: r.comments && r.comments.summary ? r.comments.summary.total_count : null,\n      shares: r.shares ? r.shares.count : 0,\n      clicks: clicks && clicks[0] ? clicks[0].value : null,\n      raw: JSON.stringify(r).slice(0, 4000),\n    },\n  };\n}).filter((x) => x.json.post_id);\n"
+      },
+      "id": "ec7180fc-b6f1-458a-ac42-6c4c3b67b3ba",
+      "name": "Normalize Engagement",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO engagement (post_id, reactions, comments, shares, clicks, raw) VALUES ($1, $2, $3, $4, $5, $6::jsonb)",
+        "options": {
+          "queryReplacement": "={{ [ $json.post_id, $json.reactions, $json.comments, $json.shares, $json.clicks, $json.raw ] }}"
+        }
+      },
+      "id": "40445614-ff3e-44a4-a457-6a938e92fca1",
+      "name": "Store Snapshot",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1120,
+        380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {
+      "main": [
+        [
+          {
+            "node": "Settle Scheduled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Refresh": {
+      "main": [
+        [
+          {
+            "node": "Settle Scheduled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "From Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Settle Scheduled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Settle Scheduled": {
+      "main": [
+        [
+          {
+            "node": "Published Posts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Published Posts": {
+      "main": [
+        [
+          {
+            "node": "Read Engagement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Engagement": {
+      "main": [
+        [
+          {
+            "node": "Normalize Engagement",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize Engagement": {
+      "main": [
+        [
+          {
+            "node": "Store Snapshot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "pwErrorHandler01"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "c81f42da-778a-4781-a2a9-6994a5416ea9"
+}

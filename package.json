@@ -1,0 +1,20 @@
+{
+  "name": "placidway-social-autopilot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "n8n workflow that turns PlacidWay content into one guardrailed Facebook post per day",
+  "type": "module",
+  "scripts": {
+    "build": "node tools/build-workflows.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "bridge": "node --env-file-if-exists=.env bridge/server.mjs",
+    "setup": "bash tools/setup.sh",
+    "up": "docker compose up -d",
+    "down": "docker compose down",
+    "reset-data": "docker compose exec -T postgres psql -U pw -d pw -c 'TRUNCATE engagement, alerts, runs, posts RESTART IDENTITY CASCADE' && rm -f media/post-*.jpg",
+    "samples": "node tools/export-samples.mjs"
+  },
+  "engines": {
+    "node": ">=20.6"
+  }
+}

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>PlacidWay Autopilot</title>
+  <meta name="description" content="Review, approve and monitor the daily PlacidWay → Facebook automation.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23E85A4F'/%3E%3Cpath d='M9 22V10h7a4 4 0 010 8h-7' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="PlacidWay Autopilot home">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 20V4h7a5 5 0 010 10H6"/></svg>
+      </span>
+      <span class="brand-name">PlacidWay Autopilot<small>Daily social pipeline</small></span>
+    </a>
+    <span id="env-chip"></span>
+    <div class="spacer"></div>
+    <div class="segmented" role="group" aria-label="Publish mode" id="mode-toggle">
+      <button type="button" data-mode="approval" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>Approval
+      </button>
+      <button type="button" data-mode="auto" aria-pressed="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>Auto-publish
+      </button>
+    </div>
+    <button class="btn coral" id="run-now" type="button">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 001.5.86l11-6.86a1 1 0 000-1.72l-11-6.86A1 1 0 008 5.14z"/></svg>
+      <span>Run now</span>
+    </button>
+    <button class="btn ghost icon-btn" id="theme-toggle" type="button" aria-label="Toggle colour theme">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1111.2 3a7 7 0 009.8 9.8z"/></svg>
+    </button>
+  </header>
+
+  <main>
+    <section class="alerts" id="alerts" aria-live="polite"></section>
+
+    <section class="hero">
+      <div class="hero-left">
+        <div>
+          <h1 id="greeting">One <em>trustworthy</em> post a day.</h1>
+          <p>PlacidWay content is turned into on-brand Facebook posts. Every claim is traced to its source page, checked by rules and a second model, and held for review when anything looks off.</p>
+        </div>
+        <div class="run-status" id="run-status">
+          <span class="pulse"></span>
+          <div class="text"><strong>Loading…</strong><span class="muted">Connecting to n8n</span></div>
+        </div>
+      </div>
+      <div class="kpis" id="kpis">
+        <div class="kpi skeleton" style="height:96px"></div><div class="kpi skeleton" style="height:96px"></div>
+        <div class="kpi skeleton" style="height:96px"></div><div class="kpi skeleton" style="height:96px"></div>
+      </div>
+    </section>
+
+    <section class="week" id="week" aria-label="This week's content rotation"></section>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="review" aria-selected="true">Review queue <span class="count" id="c-review">0</span></button>
+      <button class="tab" role="tab" data-tab="posts" aria-selected="false">Posts <span class="count" id="c-posts">0</span></button>
+      <button class="tab" role="tab" data-tab="runs" aria-selected="false">Run log <span class="count" id="c-runs">0</span></button>
+      <button class="tab" role="tab" data-tab="settings" aria-selected="false">Settings</button>
+    </nav>
+
+    <section id="view" aria-live="polite"></section>
+  </main>
+
+  <footer>PlacidWay Autopilot · n8n + Claude · <span id="server-time"></span></footer>
+
+  <dialog id="reject-dialog">
+    <form method="dialog">
+      <div class="modal-b">
+        <h3>Reject this draft?</h3>
+        <p class="muted" style="margin:0">The source URL stays marked as used, so the pipeline won't pick it again. Add a note for the record.</p>
+        <textarea id="reject-note" placeholder="e.g. Topic too sensitive for social; tone too salesy…"></textarea>
+      </div>
+      <div class="modal-f">
+        <button class="btn ghost" value="cancel">Cancel</button>
+        <button class="btn danger" value="ok" id="reject-confirm">Reject draft</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="assertive"></div>
+
+  <script src="vendor/guardrails.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

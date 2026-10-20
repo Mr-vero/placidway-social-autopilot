@@ -1,0 +1,1148 @@
+{
+  "id": "pwPublishPost001",
+  "name": "PW · 2 · Publish Post",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Publish one approved post\nCalled by the pipeline (auto mode) and the dashboard (approve / retry).\n**dry_run** simulates the Graph calls; otherwise: upload photo unpublished → create feed post (immediate or natively scheduled).\nFacebook errors are classified (expired token, rate limit, permissions, network) and raised as alerts.",
+        "height": 220,
+        "width": 700,
+        "color": 4
+      },
+      "id": "d8664e9f-7775-48d2-aa3f-a14e77ff467b",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "675d79d7-8e62-4ef1-a7d1-c9249f665730",
+      "name": "When Called",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT p.*, (SELECT json_object_agg(key, value) FROM settings) AS settings FROM posts p WHERE p.id = $1",
+        "options": {
+          "queryReplacement": "={{ [ $json.post_id ?? $json.id ] }}"
+        }
+      },
+      "id": "a0c46fab-01d5-46fc-aea5-07dec83f2fca",
+      "name": "Load Post",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        220,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Publish: validate the post and build the Graph API request.\nconst row = $json;\nconst trigger = $('When Called').first().json;\nif (!row || !row.id) throw new Error(`Post ${trigger.post_id} not found`);\nif (row.status !== 'approved') {\n  return { json: { skip: true, post_id: row.id, status: row.status, reason: `Post is \"${row.status}\", only \"approved\" posts are published` } };\n}\n\nconst s = row.settings || {};\nconst tz = $env.GENERIC_TIMEZONE || $env.TZ || 'UTC';\nconst dryRun = String(s.dry_run) !== 'false';\n\n// \"HH:MM\" -> next occurrence in local time. Facebook requires 10 min .. 30 days ahead.\nlet scheduledFor = null;\nconst pt = String(s.post_time || 'now').trim();\nif (/^\\d{1,2}:\\d{2}$/.test(pt)) {\n  const [h, m] = pt.split(':').map(Number);\n  const now = new Date();\n  const parts = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: tz, hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })\n    .formatToParts(now).map((p) => [p.type, p.value]));\n  const offsetMs = Date.UTC(+parts.year, +parts.month - 1, +parts.day, +parts.hour, +parts.minute) - Math.floor(now.getTime() / 60000) * 60000;\n  let target = Date.UTC(+parts.year, +parts.month - 1, +parts.day, h, m) - offsetMs;\n  if (target < now.getTime() + 15 * 60 * 1000) target += 24 * 3600 * 1000;\n  scheduledFor = new Date(target);\n}\n\nconst route = row.media_path ? 'photo_upload' : row.image_url ? 'photo_url' : 'feed';\nreturn {\n  json: {\n    post_id: row.id,\n    run_id: `pub-${$execution.id}`,\n    trigger: trigger.trigger || 'auto',\n    dry_run: dryRun,\n    route,\n    message: row.post_text,\n    link: (row.post_text.match(/https?:\\/\\/\\S+/) || [row.source_url])[0],\n    image_url: row.image_url,\n    media_file: row.media_path ? `/files/${row.media_path}` : null,\n    scheduled: !!scheduledFor,\n    scheduled_for: scheduledFor ? scheduledFor.toISOString() : null,\n    scheduled_unix: scheduledFor ? Math.floor(scheduledFor.getTime() / 1000) : null,\n    crosspost_ig: String(s.crosspost_instagram) === 'true',\n    graph: `https://graph.facebook.com/${$env.FB_GRAPH_VERSION || 'v24.0'}`,\n    page_id: $env.FB_PAGE_ID || '',\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "4432f8b7-659e-4fc0-a89d-dc51d1765427",
+      "name": "Prepare Publish",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "be1cc0cb-320f-4405-895b-0e752fd35f87",
+              "leftValue": "={{ !!$json.skip }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a903c54d-7bba-481d-a2a7-a49adfe49bfa",
+      "name": "Skip?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map((i) => ({ json: { post_id: i.json.post_id, status: i.json.status, skipped: true, error: i.json.reason } }));"
+      },
+      "id": "a44b3bdf-fca7-4ccf-afe1-5e520ac6fd39",
+      "name": "Skipped",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        100
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO runs (run_id, workflow, trigger, dry_run, status, post_id, item_url)\n     VALUES ($1, 'publish', $2, $3::boolean, 'running', $4, (SELECT source_url FROM posts WHERE id = $4)) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.run_id, $json.trigger, $json.dry_run, $json.post_id ] }}"
+        }
+      },
+      "id": "b7c0e135-fe3e-4178-a650-e491b1341f14",
+      "name": "Log Publish Start",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        880,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6221ec2c-9ce8-4923-982a-d5fbdd18022f",
+              "leftValue": "={{ $('Prepare Publish').item.json.dry_run }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "1c58a6f5-fe58-408f-a205-3dcdd1934a34",
+      "name": "Dry Run?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Simulate Publish (dry run): everything except the network write.\n// Records the exact Graph API calls that would be made, so the demo is auditable.\nconst p = $('Prepare Publish').item.json;\nconst page = p.page_id || '{PAGE_ID}';\nconst steps = [];\nif (p.route !== 'feed') {\n  steps.push({\n    method: 'POST',\n    url: `${p.graph}/${page}/photos`,\n    body: {\n      ...(p.route === 'photo_upload' ? { source: `@${p.media_file} (multipart)` } : { url: p.image_url }),\n      published: false,\n      temporary: p.scheduled,\n    },\n  });\n}\nsteps.push({\n  method: 'POST',\n  url: `${p.graph}/${page}/feed`,\n  body: {\n    message: p.message,\n    published: !p.scheduled,\n    ...(p.route !== 'feed' ? { attached_media: [{ media_fbid: '<id from step 1>' }] } : { link: p.link }),\n    ...(p.scheduled ? { scheduled_publish_time: p.scheduled_unix } : {}),\n  },\n});\nif (p.crosspost_ig && !p.scheduled && p.route !== 'feed') {\n  steps.push({ method: 'POST', url: `${p.graph}/{IG_USER_ID}/media`, body: { image_url: '<FB-hosted photo url>', caption: '<post text without link>' } });\n  steps.push({ method: 'POST', url: `${p.graph}/{IG_USER_ID}/media_publish`, body: { creation_id: '<container id>' } });\n}\nreturn {\n  json: {\n    ...p,\n    fb_post_id: `dryrun_${Date.now()}`,\n    fb_permalink: null,\n    status: p.scheduled ? 'scheduled' : 'published',\n    simulated_request: steps,\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "0163e9b5-d203-4926-a106-6399803bb700",
+      "name": "Simulate Publish",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1320,
+        80
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{ ['photo_upload', 'photo_url', 'feed'].indexOf($('Prepare Publish').item.json.route) }}"
+      },
+      "id": "3831c691-7e65-4b94-a5f7-0db027b97568",
+      "name": "Publish Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        1320,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileSelector": "={{ $('Prepare Publish').item.json.media_file }}",
+        "options": {
+          "dataPropertyName": "data"
+        }
+      },
+      "id": "208a27b2-7d86-44c1-ac64-13a01edd8953",
+      "name": "Read Image File",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        1540,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Prepare Publish').item.json.graph }}/{{ $('Prepare Publish').item.json.page_id }}/photos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "source",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "published",
+              "value": "false"
+            },
+            {
+              "name": "temporary",
+              "value": "={{ $('Prepare Publish').item.json.scheduled ? 'true' : 'false' }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "0ad52571-f42c-44ea-a4b7-d5714b551364",
+      "name": "FB Upload Photo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Prepare Publish').item.json.graph }}/{{ $('Prepare Publish').item.json.page_id }}/photos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ url: $('Prepare Publish').item.json.image_url, published: false, temporary: $('Prepare Publish').item.json.scheduled }) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "3ee425bd-9260-43bf-a6fa-70ca1fe862c4",
+      "name": "FB Photo From URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1760,
+        500
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Attach Media: build the /feed request. Photos are uploaded unpublished first\n// (temporary when scheduling, per Graph docs) and attached by id, so one call\n// handles immediate and scheduled posts with or without an image.\nconst p = $('Prepare Publish').item.json;\nconst mediaId = p.route === 'feed' ? null : ($json.id || null);\nif (p.route !== 'feed' && !mediaId) throw new Error(`Photo upload returned no id: ${JSON.stringify($json).slice(0, 300)}`);\nconst body = { message: p.message, published: !p.scheduled };\nif (mediaId) body.attached_media = [{ media_fbid: mediaId }];\nelse body.link = p.link;\nif (p.scheduled) body.scheduled_publish_time = p.scheduled_unix;\nreturn { json: { ...p, fb_photo_id: mediaId, fb_body: body } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "e8953de4-b6c4-499f-a4aa-bc03554bd45b",
+      "name": "Attach Media",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.graph }}/{{ $json.page_id }}/feed",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.fb_body) }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "863bbcdc-483e-45b0-aec5-f479dcd502dd",
+      "name": "FB Create Post",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2200,
+        400
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 10000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Normalize FB Response: /feed returns {id: \"<page>_<post>\"}.\nconst p = $('Attach Media').item.json;\nconst r = $json;\nif (!r.id) throw new Error(`Facebook returned no post id: ${JSON.stringify(r).slice(0, 300)}`);\nreturn { json: { ...p, fb_post_id: r.id, status: p.scheduled ? 'scheduled' : 'published' } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "e9c88a5f-04c9-45ba-a0d9-3faf171d7118",
+      "name": "Normalize FB Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.graph }}/{{ $json.fb_post_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "permalink_url"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 20000
+        }
+      },
+      "id": "57b6f276-c538-46cf-a446-0635db95b6a1",
+      "name": "Get Permalink",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2640,
+        320
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Add Permalink: attach the public URL when Graph returns it (scheduled posts have none yet).\nconst p = $('Normalize FB Response').item.json;\nreturn { json: { ...p, fb_permalink: $json.permalink_url || null } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "8be94a93-bf9f-424f-a2c5-871f558de3f0",
+      "name": "Add Permalink",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2860,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "074946b3-638f-4dc5-aa28-a4ead6e89e9e",
+              "leftValue": "={{ $json.crosspost_ig && !$json.scheduled && !!$json.fb_photo_id && !!$env.IG_USER_ID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "f0f21436-e261-4690-a547-b22459e9d53e",
+      "name": "Instagram?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        3080,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.graph }}/{{ $json.fb_photo_id }}",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "fields",
+              "value": "images"
+            },
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        }
+      },
+      "id": "064c7c52-f381-4f86-a9d3-f49072904ba7",
+      "name": "IG Photo URL",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3300,
+        500
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Add Permalink').item.json.graph }}/{{ $env.IG_USER_ID }}/media",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ image_url: ($json.images || [{}])[0].source, caption: $('Add Permalink').item.json.message.replace(/👉\\s*https?:\\/\\/\\S+/u, 'Read more on placidway.com') }) }}"
+      },
+      "id": "7605574f-9e88-4db8-a485-29f046e7ca82",
+      "name": "IG Create Container",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3520,
+        500
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Add Permalink').item.json.graph }}/{{ $env.IG_USER_ID }}/media_publish",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "access_token",
+              "value": "={{ $env.FB_PAGE_ACCESS_TOKEN }}"
+            },
+            {
+              "name": "creation_id",
+              "value": "={{ $json.id }}"
+            }
+          ]
+        }
+      },
+      "id": "f304a8fa-2385-484f-a927-79d78ff0f70e",
+      "name": "IG Publish",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3740,
+        500
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// IG Result: record the Instagram cross-post (best effort, never blocks Facebook).\nconst p = $('Add Permalink').item.json;\nconst r = $json;\nif (r.id && !r.error) return { json: { ...p, ig_media_id: r.id } };\nreturn {\n  json: {\n    ...p,\n    alert: { severity: 'warning', source: 'instagram', message: `Instagram cross-post failed for post #${p.post_id} (Facebook post is live)`, details: JSON.stringify(r.error || r).slice(0, 1500) },\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "af94b7df-ab60-48d4-a4ef-4f001d0a19d2",
+      "name": "IG Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3960,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Classify FB Error: turn Graph API failures into actionable alerts.\nconst p = $('Prepare Publish').item.json;\nconst e = $json.error || $json;\nconst raw = JSON.stringify(e);\nconst code = Number((raw.match(/\\\\?\"code\\\\?\"\\s*:\\s*(\\d+)/) || [])[1] || 0);\nconst http = Number(e.httpCode || e.status || (raw.match(/\\b(4\\d\\d|5\\d\\d)\\b/) || [])[1] || 0);\n\nlet kind = 'api_error';\nlet message = `Facebook publish failed for post #${p.post_id}`;\nif (code === 190 || /OAuthException|access token|session has expired/i.test(raw)) {\n  kind = 'token_expired';\n  message = 'Facebook Page token is invalid or expired: generate a new long-lived Page token (docs/facebook-setup.md) and update FB_PAGE_ACCESS_TOKEN';\n} else if ([4, 17, 32, 613].includes(code) || http === 429) {\n  kind = 'rate_limited';\n  message = 'Facebook rate limit hit: the post was not published; retry from the dashboard later';\n} else if (code === 200 || code === 10 || /permission/i.test(raw)) {\n  kind = 'permission';\n  message = 'Facebook permission error: the token needs pages_manage_posts + pages_read_engagement for this Page';\n} else if (http >= 500 || /ECONN|ETIMEDOUT|socket hang up|timeout/i.test(raw)) {\n  kind = 'network';\n  message = 'Facebook API unreachable after retries';\n}\nreturn {\n  json: {\n    ...p,\n    status: 'publish_failed',\n    error: `${kind}: ${(e.message || '').slice(0, 300)}`,\n    alert: { severity: 'error', source: 'publish', message, details: JSON.stringify({ kind, code, http, post_id: p.post_id, raw: raw.slice(0, 1500) }) },\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "e14320ea-d3db-4d81-a346-c4edd98f3ab7",
+      "name": "Classify FB Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2420,
+        660
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "1c890eb7-5af6-4929-abf8-3a074f9c2d1a",
+      "name": "Outcome",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        4180,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE posts SET status = $2, fb_post_id = $3, fb_permalink = $4, ig_media_id = $5, scheduled_for = $6::timestamptz,\n       published_at = CASE WHEN $2 = 'published' THEN now() ELSE published_at END,\n       error = $7, dry_run = $8::boolean, updated_at = now()\n     WHERE id = $1 RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.post_id, $json.status, $json.fb_post_id || null, $json.fb_permalink || null, $json.ig_media_id || null, $json.scheduled_for || null, $json.error || null, $json.dry_run ] }}"
+        }
+      },
+      "id": "5751c046-20a7-444a-a45d-304a35a93439",
+      "name": "Save Outcome",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4400,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE runs SET status = CASE WHEN $2 = 'publish_failed' THEN 'error' ELSE 'success' END,\n       fb_post_id = $3, error = $4, details = $5::jsonb, finished_at = now()\n     WHERE run_id = $1",
+        "options": {
+          "queryReplacement": "={{ [ $('Outcome').item.json.run_id, $('Outcome').item.json.status, $('Outcome').item.json.fb_post_id || null, $('Outcome').item.json.error || null, JSON.stringify({ status: $('Outcome').item.json.status, scheduled_for: $('Outcome').item.json.scheduled_for, route: $('Outcome').item.json.route, simulated_request: $('Outcome').item.json.simulated_request || null }) ] }}"
+        }
+      },
+      "id": "b641f0a8-6f0b-42a0-aa3c-ebc128abe07b",
+      "name": "Close Publish Run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        4620,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f8e66ba7-85fd-4f09-88da-2a7511a4b406",
+              "leftValue": "={{ !!$('Outcome').item.json.alert }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "8a22378d-4bdc-4a85-a3b1-d61df4e59b7a",
+      "name": "Has Alert?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4840,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO alerts (severity, source, message, details) VALUES ($1, $2, $3, $4::jsonb) RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $('Outcome').item.json.alert.severity, $('Outcome').item.json.alert.source, $('Outcome').item.json.alert.message, $('Outcome').item.json.alert.details ] }}"
+        }
+      },
+      "id": "ad1dfb36-28de-4a1d-a887-ecb70dab6bbe",
+      "name": "Insert Alert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5060,
+        140
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "4582431c-37f0-429b-8b8d-5554a253884f",
+              "leftValue": "={{ !!$env.ALERT_WEBHOOK_URL }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "be06760a-908d-4bf5-adda-16f7f7201e57",
+      "name": "Alert Webhook?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5280,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ALERT_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: ':rotating_light: PlacidWay Autopilot: ' + $('Outcome').item.json.alert.message, content: 'PlacidWay Autopilot: ' + $('Outcome').item.json.alert.message }) }}"
+      },
+      "id": "6773469d-c8fc-450d-aab2-dcf9ee2a864e",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        5500,
+        40
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Result: the sub-workflow's return value to whoever called it.\nconst r = $('Outcome').item.json;\nreturn {\n  json: {\n    post_id: r.post_id,\n    status: r.status,\n    fb_post_id: r.fb_post_id || null,\n    fb_permalink: r.fb_permalink || null,\n    scheduled_for: r.scheduled_for || null,\n    dry_run: r.dry_run,\n    error: r.error || null,\n    simulated_request: r.simulated_request || null,\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "32256d3b-d588-4f7f-ae3c-5136d667a44a",
+      "name": "Result",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5720,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "When Called": {
+      "main": [
+        [
+          {
+            "node": "Load Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Post": {
+      "main": [
+        [
+          {
+            "node": "Prepare Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Publish": {
+      "main": [
+        [
+          {
+            "node": "Skip?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skip?": {
+      "main": [
+        [
+          {
+            "node": "Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Publish Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Publish Start": {
+      "main": [
+        [
+          {
+            "node": "Dry Run?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dry Run?": {
+      "main": [
+        [
+          {
+            "node": "Simulate Publish",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Publish Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simulate Publish": {
+      "main": [
+        [
+          {
+            "node": "Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Route": {
+      "main": [
+        [
+          {
+            "node": "Read Image File",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "FB Photo From URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Attach Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Image File": {
+      "main": [
+        [
+          {
+            "node": "FB Upload Photo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Upload Photo": {
+      "main": [
+        [
+          {
+            "node": "Attach Media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify FB Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Photo From URL": {
+      "main": [
+        [
+          {
+            "node": "Attach Media",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify FB Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Media": {
+      "main": [
+        [
+          {
+            "node": "FB Create Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FB Create Post": {
+      "main": [
+        [
+          {
+            "node": "Normalize FB Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Classify FB Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize FB Response": {
+      "main": [
+        [
+          {
+            "node": "Get Permalink",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Permalink": {
+      "main": [
+        [
+          {
+            "node": "Add Permalink",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Permalink": {
+      "main": [
+        [
+          {
+            "node": "Instagram?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram?": {
+      "main": [
+        [
+          {
+            "node": "IG Photo URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Photo URL": {
+      "main": [
+        [
+          {
+            "node": "IG Create Container",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Create Container": {
+      "main": [
+        [
+          {
+            "node": "IG Publish",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Publish": {
+      "main": [
+        [
+          {
+            "node": "IG Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IG Result": {
+      "main": [
+        [
+          {
+            "node": "Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify FB Error": {
+      "main": [
+        [
+          {
+            "node": "Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Outcome": {
+      "main": [
+        [
+          {
+            "node": "Save Outcome",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Outcome": {
+      "main": [
+        [
+          {
+            "node": "Close Publish Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Close Publish Run": {
+      "main": [
+        [
+          {
+            "node": "Has Alert?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Alert?": {
+      "main": [
+        [
+          {
+            "node": "Insert Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert Alert": {
+      "main": [
+        [
+          {
+            "node": "Alert Webhook?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alert Webhook?": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Alert": {
+      "main": [
+        [
+          {
+            "node": "Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "pwErrorHandler01"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "b71db3fc-d4cf-4b68-a89c-162fc205685e"
+}

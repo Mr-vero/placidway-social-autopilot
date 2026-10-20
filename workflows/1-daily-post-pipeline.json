@@ -1,0 +1,1500 @@
+{
+  "id": "pwDailyPipeline1",
+  "name": "PW · 1 · Daily Post Pipeline",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## PlacidWay → Facebook daily autopilot\nOne post per day. Triggers: schedule (07:00), manual, or the dashboard **Run now** button.\nErrors route to **PW · 5 · Error Handler** (dashboard alert + optional Slack/Discord webhook).",
+        "height": 200,
+        "width": 560,
+        "color": 4
+      },
+      "id": "ff21c8e6-c306-4127-a0cc-9c898ba30cae",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ① Select\nSitemaps → drop used URLs → weekday content-type rotation → avoid repeating recent categories. 4 requests, 1.1 s apart (robots.txt-friendly).",
+        "height": 400,
+        "width": 1140,
+        "color": 7
+      },
+      "id": "c2dcd5d4-6dc4-47d0-a9ff-af2ef6ba306d",
+      "name": "Note 2",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        640,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ② Extract\nClaim the URL (UNIQUE constraint = never posts twice) → fetch one page → JSON-LD / OpenGraph / HTML fallback.",
+        "height": 400,
+        "width": 900,
+        "color": 7
+      },
+      "id": "d0089534-da99-4052-adfc-b9cd76c549ce",
+      "name": "Note 3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1800,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ③ Generate + ④ Guardrails\nClaude writes structured parts (+ a source quote per line) → code assembles the post → deterministic rule checks → independent Claude reviewer → pass, retry with feedback, or escalate to a human.",
+        "height": 560,
+        "width": 1600,
+        "color": 6
+      },
+      "id": "f458912e-44fe-4a5b-a187-b3d58a1d0ba7",
+      "name": "Note 4",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        2720,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ⑤ Image\nBrand the featured image, or render a branded card when none exists.",
+        "height": 640,
+        "width": 980,
+        "color": 7
+      },
+      "id": "f846e1bf-774b-4f1c-aaf8-c177036412ff",
+      "name": "Note 5",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        4340,
+        60
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### ⑥ Save, publish, log\nAuto mode publishes via **PW · 2 · Publish Post**; approval mode waits for the dashboard.",
+        "height": 400,
+        "width": 1460,
+        "color": 7
+      },
+      "id": "e5d21253-64e0-4833-a792-4ad98b47c593",
+      "name": "Note 6",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        5340,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "days",
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "7baa27da-1170-453b-a167-76f63ee2b2d5",
+      "name": "Daily 07:00",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "72096a22-e6d7-4b67-a641-76ccb898ea68",
+      "name": "Manual Run",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "id": "af7b958c-689c-4570-ad0a-8b1d08d4d5a7",
+      "name": "From Dashboard",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        0,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Start Run: normalise whichever trigger fired into one run context.\nconst input = $input.first().json || {};\nlet trigger = 'manual';\nif (input.trigger) trigger = String(input.trigger);          // called by the dashboard\nelse if (input.timestamp || input['Readable date']) trigger = 'schedule';\n\nconst tz = $env.GENERIC_TIMEZONE || $env.TZ || 'UTC';\nconst now = new Date();\nconst weekday = new Intl.DateTimeFormat('en-US', { weekday: 'short', timeZone: tz }).format(now);\nconst dow = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(weekday);\n\nreturn [{\n  json: {\n    run: {\n      run_id: `pipe-${$execution.id}`,\n      execution_id: $execution.id,\n      trigger,\n      started_at: now.toISOString(),\n      tz,\n      dow,\n      force_type: input.force_type || null,   // optional override from the dashboard (\"article\", \"package\"...)\n    },\n  },\n}];\n"
+      },
+      "id": "068dde95-d2a1-4aef-a29c-fb3e82be53d4",
+      "name": "Start Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        380
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT (SELECT json_object_agg(key, value) FROM settings) AS settings,\n       (SELECT coalesce(json_agg(source_url), '[]'::json) FROM posts WHERE status <> 'failed') AS used_urls,\n       (SELECT coalesce(json_agg(json_build_object('category', category, 'content_type', content_type)), '[]'::json)\n          FROM (SELECT category, content_type FROM posts WHERE status NOT IN ('failed','rejected','drafting')\n                ORDER BY created_at DESC LIMIT 10) r) AS recent",
+        "options": {}
+      },
+      "id": "bd702f9a-4fab-4397-a096-2b949faed1ad",
+      "name": "Load Settings",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        460,
+        380
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO runs (run_id, workflow, trigger, mode, dry_run, status)\n     VALUES ($1, 'pipeline', $2, $3, $4::boolean, 'running') RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $('Start Run').first().json.run.run_id, $('Start Run').first().json.run.trigger, $json.settings.publish_mode, $json.settings.dry_run ] }}"
+        }
+      },
+      "id": "e273f3fc-b048-4c64-a238-36b9ecb6a0e3",
+      "name": "Log Run Start",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        680,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Sitemap Targets: which PlacidWay sitemaps feed the candidate pool.\n// Sitemaps are the politest source available: one request per content type,\n// already sorted by lastmod, explicitly published for crawlers in robots.txt.\nconst base = ($env.PW_BASE_URL || 'https://www.placidway.com').replace(/\\/$/, '');\nconst ctx = $('Start Run').first().json;\nconst targets = [\n  { type: 'article', url: `${base}/1/sitemap_articles.xml` },\n  { type: 'package', url: `${base}/1/sitemap_packages.xml` },\n  { type: 'answer',  url: `${base}/sitemap/1/sitemap_answers.xml` },\n  { type: 'news',    url: `${base}/1/sitemap_news.xml` },\n];\nreturn targets.map((t) => ({ json: { ...ctx, target: t } }));\n"
+      },
+      "id": "24adeea4-fe30-4b70-a89b-b325d9cf0db8",
+      "name": "Sitemap Targets",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.target.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "={{ $env.PW_USER_AGENT }}"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xml;q=0.9,*/*;q=0.8"
+            }
+          ]
+        },
+        "options": {
+          "batching": {
+            "batch": {
+              "batchSize": 1,
+              "batchInterval": 1100
+            }
+          },
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "7085f1ce-e420-4535-ab72-cd6145c0f55e",
+      "name": "Fetch Sitemaps",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1120,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pick Candidate: parse sitemaps, drop anything already used, apply variety\n// rules, and choose exactly one URL for today.\n// ---- inlined from lib/categories.js ----\n// Shared: treatment-category classifier used for variety rules and hashtags.\n// Inlined into Code nodes at build time (see tools/build-workflows.mjs).\nconst CATEGORY_RULES = [\n  ['Stem Cell & Regenerative', /stem[- ]?cell|regenerative|prp|exosome|mesenchymal/i],\n  ['Cancer Care', /cancer|oncolog|tumou?r|chemo|radiother|immunother|car[- ]?t\\b|leukemia|lymphoma/i],\n  ['Bariatric & Weight Loss', /bariatric|gastric|sleeve|bypass|obesity|weight[- ]loss|ozempic|mounjaro|glp[- ]?1|semaglutide|tirzepatide/i],\n  ['Cosmetic & Plastic Surgery', /cosmetic|plastic|tummy|abdominoplast|liposuc|lipo\\b|breast|rhinoplast|facelift|bbl|butt[- ]lift|body[- ]contour|mommy[- ]makeover|blepharo|eyelid/i],\n  ['Dental Care', /dental|dentist|implant|veneer|crown|all[- ]on[- ]?\\d|teeth|tooth|smile/i],\n  ['Fertility & IVF', /ivf|fertility|surrogacy|egg[- ]donat|icsi|infertil/i],\n  ['Orthopedics & Spine', /orthop|knee|hip|spine|spinal|shoulder|joint|arthro|disc\\b|scoliosis/i],\n  ['Cardiology', /cardi|heart|bypass[- ]surgery|valve|angioplast/i],\n  ['Hair Restoration', /hair[- ]?(transplant|restoration|loss)|fue\\b|dhi\\b/i],\n  ['Eye Care', /lasik|eye|cataract|ophthalm|vision/i],\n  ['Neurology', /neuro|parkinson|alzheimer|autism|multiple[- ]sclerosis|\\bms\\b|stroke|cerebral[- ]palsy|huntington|als\\b/i],\n  ['Health Checkups', /check[- ]?up|screening|assessment|executive[- ]health|wellness/i],\n  ['Anti-Aging & Wellness', /anti[- ]?aging|longevity|iv[- ]therapy|nad\\+?|detox|spa\\b/i],\n  ['Urology', /urolog|prostate|erectile|kidney|ed\\b/i],\n  ['Diabetes', /diabet/i],\n];\n\nfunction classifyCategory(text) {\n  const s = String(text || '').replace(/[-_]/g, ' ');\n  for (const [name, re] of CATEGORY_RULES) if (re.test(s)) return name;\n  return 'Medical Travel';\n}\n\n// Strip the directory and id from a PlacidWay URL to get a readable title guess.\nfunction titleFromUrl(url) {\n  const last = String(url).split('?')[0].replace(/\\/$/, '').split('/').pop() || '';\n  return decodeURIComponent(last).replace(/-/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nfunction normalizeUrl(url) {\n  try {\n    const u = new URL(String(url).trim());\n    u.hash = '';\n    u.search = '';\n    u.hostname = u.hostname.toLowerCase().replace(/^placidway\\.com$/, 'www.placidway.com');\n    u.protocol = 'https:';\n    return u.toString().replace(/\\/$/, '');\n  } catch (e) {\n    return String(url).trim();\n  }\n}\n// ---- end lib/categories.js ----\nconst ctx = $('Start Run').first().json;\nconst state = $('Load Settings').first().json;\nconst settings = state.settings || {};\nconst used = new Set((state.used_urls || []).map(normalizeUrl));\nconst recent = state.recent || [];\nconst targets = $('Sitemap Targets').all().map((i) => i.json.target);\nconst responses = $input.all();\n\nconst POOL_PER_TYPE = 60;\nconst avoidN = Number(settings.avoid_recent_categories || 3);\nconst recentCategories = recent.slice(0, avoidN).map((r) => r.category).filter(Boolean);\nconst lastType = recent[0] && recent[0].content_type;\n\nlet rotation = {};\ntry { rotation = JSON.parse(settings.rotation || '{}'); } catch (e) { rotation = {}; }\nconst todaysType = ctx.run.force_type || rotation[String(ctx.run.dow)] || 'article';\n\nfunction parseSitemap(xml, type) {\n  const out = [];\n  const re = /<url>([\\s\\S]*?)<\\/url>/g;\n  let m;\n  while ((m = re.exec(xml))) {\n    const block = m[1];\n    const loc = (block.match(/<loc>\\s*([^<]+?)\\s*<\\/loc>/) || [])[1];\n    if (!loc) continue;\n    const lastmod = (block.match(/<lastmod>\\s*([^<]+?)\\s*<\\/lastmod>/) || [])[1] || '';\n    const image = (block.match(/<image:loc>\\s*([^<]+?)\\s*<\\/image:loc>/) || [])[1] || null;\n    const newsTitle = (block.match(/<news:title>\\s*([^<]+?)\\s*<\\/news:title>/) || [])[1] || null;\n    const id = Number((loc.match(/\\/(\\d+)\\//) || [])[1] || 0);\n    out.push({ url: normalizeUrl(loc), type, lastmod, image, id, title_guess: newsTitle || titleFromUrl(loc) });\n  }\n  return out;\n}\n\nconst pools = {};\nconst poolSizes = {};\nresponses.forEach((r, i) => {\n  const type = targets[i] && targets[i].type;\n  if (!type) return;\n  const xml = typeof r.json.data === 'string' ? r.json.data : '';\n  const all = parseSitemap(xml, type);\n  // Freshest first: lastmod, then id (PlacidWay ids are monotonic, and lastmod alone is noisy\n  // because old pages get touched).\n  all.sort((a, b) => (b.lastmod.localeCompare(a.lastmod)) || (b.id - a.id));\n  const fresh = all.slice(0, POOL_PER_TYPE).filter((c) => !used.has(c.url));\n  fresh.forEach((c) => { c.category = classifyCategory(c.title_guess + ' ' + c.url); });\n  pools[type] = fresh;\n  poolSizes[type] = { in_sitemap: all.length, fresh_unused: fresh.length };\n});\n\nif (!Object.values(poolSizes).some((p) => p.in_sitemap > 0)) {\n  throw new Error('All PlacidWay sitemaps came back empty or unparseable: site may be down or markup changed');\n}\n\nfunction score(c, rank) {\n  let s = 100 - rank;                                    // freshness\n  if (recentCategories.includes(c.category)) s -= 60;   // category variety\n  if (c.image) s += 5;                                  // prefer items with a featured image\n  if (c.title_guess.length < 20) s -= 10;               // thin slugs tend to be thin pages\n  return s;\n}\n\nfunction best(list) {\n  return list\n    .map((c, rank) => ({ c, s: score(c, rank) }))\n    .sort((a, b) => b.s - a.s)[0];\n}\n\nlet chosen = null;\nlet reason = '';\nconst primary = pools[todaysType] && pools[todaysType].length ? best(pools[todaysType]) : null;\nif (primary) {\n  chosen = primary.c;\n  reason = ctx.run.force_type\n    ? `Dashboard requested \"${todaysType}\"`\n    : `Rotation picks \"${todaysType}\" for ${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][ctx.run.dow]}`;\n} else {\n  // Fallback: any other type, avoiding yesterday's type when possible.\n  const fallbacks = Object.keys(pools).filter((t) => t !== todaysType && pools[t].length);\n  fallbacks.sort((a, b) => (a === lastType) - (b === lastType));\n  for (const t of fallbacks) { const b = best(pools[t]); if (b) { chosen = b.c; break; } }\n  reason = chosen ? `No fresh \"${todaysType}\" item; fell back to \"${chosen.type}\"` : 'Nothing fresh to post';\n}\nif (chosen && recentCategories.includes(chosen.category)) reason += ` (category \"${chosen.category}\" repeats: no alternative)`;\nelse if (chosen) reason += `; category \"${chosen.category}\" not used in last ${avoidN} posts`;\n\nreturn [{\n  json: {\n    ...ctx,\n    settings,\n    found: !!chosen,\n    item: chosen,\n    selection: { reason, todays_type: todaysType, recent_categories: recentCategories, pools: poolSizes },\n  },\n}];\n"
+      },
+      "id": "b55286c3-c7a3-4848-a0ff-41399bfec8ca",
+      "name": "Pick Candidate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b9e064cf-185e-43c5-9a61-a5494371f274",
+              "leftValue": "={{ $json.found }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "a4177de7-1af1-4d5e-a76b-b8ce33af1843",
+      "name": "Found Item?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE runs SET status = 'skipped', finished_at = now(), details = $2::jsonb WHERE run_id = $1",
+        "options": {
+          "queryReplacement": "={{ [ $('Pick Candidate').first().json.run.run_id, JSON.stringify({ ...$('Pick Candidate').first().json.selection, note: $('Pick Candidate').first().json.found ? 'URL was claimed by a concurrent run' : 'nothing fresh to post' }) ] }}"
+        }
+      },
+      "id": "68521a13-e945-4193-a793-254c4e77965b",
+      "name": "Nothing To Post",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1780,
+        600
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "INSERT INTO posts (source_url, content_type, category, title, image_url, status, run_id)\n     VALUES ($1, $2, $3, $4, $5, 'drafting', $6)\n     ON CONFLICT (source_url) DO UPDATE SET status = 'drafting', run_id = EXCLUDED.run_id, updated_at = now()\n       WHERE posts.status = 'failed'\n     RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.item.url, $json.item.type, $json.item.category, $json.item.title_guess, $json.item.image, $json.run.run_id ] }}"
+        }
+      },
+      "id": "43d6375b-611c-4377-a809-174e0ed2e223",
+      "name": "Claim URL",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1840,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "297c3b29-fe88-4adc-9064-27d6c22cc0e8",
+              "leftValue": "={{ !!$json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "e065aa68-2cb0-4541-aba1-1c5737e023f2",
+      "name": "Claimed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1840,
+        500
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 1.2
+      },
+      "id": "5e74fde4-b308-44ce-a53b-e778fae3245c",
+      "name": "Polite Delay",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2060,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Pick Candidate').first().json.item.url }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "={{ $env.PW_USER_AGENT }}"
+            },
+            {
+              "name": "Accept",
+              "value": "text/html,application/xml;q=0.9,*/*;q=0.8"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "text",
+              "outputPropertyName": "data"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "ddaa69d7-6ecf-462a-ac38-5787882935cc",
+      "name": "Fetch Page",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2280,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract Content: turn the fetched page into a clean, bounded source record.\n// Strategy: JSON-LD first (PlacidWay publishes Article / Product / BlogPosting /\n// FAQPage / BreadcrumbList on every page), Open Graph second, stripped HTML last.\n// ---- inlined from lib/categories.js ----\n// Shared: treatment-category classifier used for variety rules and hashtags.\n// Inlined into Code nodes at build time (see tools/build-workflows.mjs).\nconst CATEGORY_RULES = [\n  ['Stem Cell & Regenerative', /stem[- ]?cell|regenerative|prp|exosome|mesenchymal/i],\n  ['Cancer Care', /cancer|oncolog|tumou?r|chemo|radiother|immunother|car[- ]?t\\b|leukemia|lymphoma/i],\n  ['Bariatric & Weight Loss', /bariatric|gastric|sleeve|bypass|obesity|weight[- ]loss|ozempic|mounjaro|glp[- ]?1|semaglutide|tirzepatide/i],\n  ['Cosmetic & Plastic Surgery', /cosmetic|plastic|tummy|abdominoplast|liposuc|lipo\\b|breast|rhinoplast|facelift|bbl|butt[- ]lift|body[- ]contour|mommy[- ]makeover|blepharo|eyelid/i],\n  ['Dental Care', /dental|dentist|implant|veneer|crown|all[- ]on[- ]?\\d|teeth|tooth|smile/i],\n  ['Fertility & IVF', /ivf|fertility|surrogacy|egg[- ]donat|icsi|infertil/i],\n  ['Orthopedics & Spine', /orthop|knee|hip|spine|spinal|shoulder|joint|arthro|disc\\b|scoliosis/i],\n  ['Cardiology', /cardi|heart|bypass[- ]surgery|valve|angioplast/i],\n  ['Hair Restoration', /hair[- ]?(transplant|restoration|loss)|fue\\b|dhi\\b/i],\n  ['Eye Care', /lasik|eye|cataract|ophthalm|vision/i],\n  ['Neurology', /neuro|parkinson|alzheimer|autism|multiple[- ]sclerosis|\\bms\\b|stroke|cerebral[- ]palsy|huntington|als\\b/i],\n  ['Health Checkups', /check[- ]?up|screening|assessment|executive[- ]health|wellness/i],\n  ['Anti-Aging & Wellness', /anti[- ]?aging|longevity|iv[- ]therapy|nad\\+?|detox|spa\\b/i],\n  ['Urology', /urolog|prostate|erectile|kidney|ed\\b/i],\n  ['Diabetes', /diabet/i],\n];\n\nfunction classifyCategory(text) {\n  const s = String(text || '').replace(/[-_]/g, ' ');\n  for (const [name, re] of CATEGORY_RULES) if (re.test(s)) return name;\n  return 'Medical Travel';\n}\n\n// Strip the directory and id from a PlacidWay URL to get a readable title guess.\nfunction titleFromUrl(url) {\n  const last = String(url).split('?')[0].replace(/\\/$/, '').split('/').pop() || '';\n  return decodeURIComponent(last).replace(/-/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nfunction normalizeUrl(url) {\n  try {\n    const u = new URL(String(url).trim());\n    u.hash = '';\n    u.search = '';\n    u.hostname = u.hostname.toLowerCase().replace(/^placidway\\.com$/, 'www.placidway.com');\n    u.protocol = 'https:';\n    return u.toString().replace(/\\/$/, '');\n  } catch (e) {\n    return String(url).trim();\n  }\n}\n// ---- end lib/categories.js ----\nconst ctx = $('Pick Candidate').first().json;\nconst claimed = $('Claim URL').first().json;\nconst html = String($input.first().json.data || '');\n\nconst MAX_BODY = 6000;\n\nfunction decode(s) {\n  return String(s || '')\n    .replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '\"').replace(/&#0?39;|&apos;|&#x27;/g, \"'\")\n    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&rsquo;|&lsquo;/g, \"'\").replace(/&rdquo;|&ldquo;/g, '\"')\n    .replace(/&ndash;/g, '-').replace(/&mdash;/g, '-').replace(/&#(\\d+);/g, (_, n) => String.fromCharCode(Number(n)));\n}\nfunction strip(s) {\n  return decode(String(s || '')\n    .replace(/<script[\\s\\S]*?<\\/script>|<style[\\s\\S]*?<\\/style>|<noscript[\\s\\S]*?<\\/noscript>/gi, ' ')\n    .replace(/<\\/(p|li|h[1-6]|div|tr|br)>/gi, '\\n').replace(/<br\\s*\\/?>/gi, '\\n')\n    .replace(/<[^>]+>/g, ' '))\n    .replace(/[ \\t]+/g, ' ').replace(/\\s*\\n\\s*/g, '\\n').replace(/\\n{2,}/g, '\\n').trim();\n}\nfunction meta(prop) {\n  const re = new RegExp(`<meta[^>]+(?:property|name)=[\"']${prop}[\"'][^>]*content=[\"']([^\"']*)[\"']`, 'i');\n  const re2 = new RegExp(`<meta[^>]+content=[\"']([^\"']*)[\"'][^>]*(?:property|name)=[\"']${prop}[\"']`, 'i');\n  const m = html.match(re) || html.match(re2);\n  return m ? decode(m[1]).trim() : null;\n}\n\n// ---- JSON-LD ----\nconst ld = [];\nconst ldRe = /<script[^>]*type=[\"']application\\/ld\\+json[\"'][^>]*>([\\s\\S]*?)<\\/script>/gi;\nlet m;\nwhile ((m = ldRe.exec(html))) {\n  try {\n    const parsed = JSON.parse(m[1].trim().replace(/[\\u0000-\\u001f]+/g, ' '));\n    const flat = [].concat(parsed).flatMap((d) => (d && d['@graph'] ? d['@graph'] : [d]));\n    ld.push(...flat.filter(Boolean));\n  } catch (e) { /* malformed block: skip, fall back to OG/HTML */ }\n}\nconst byType = (t) => ld.find((d) => [].concat(d['@type']).includes(t));\n\nconst article = byType('Article') || byType('NewsArticle') || byType('BlogPosting') || byType('MedicalWebPage');\nconst product = byType('Product');\nconst webpage = byType('WebPage');\nconst faqPage = byType('FAQPage');\nconst crumbs = byType('BreadcrumbList');\n\nconst title = decode(\n  (article && (article.headline || article.name)) || (product && product.name) ||\n  meta('og:title') || (html.match(/<title>([^<]*)/i) || [])[1] || ctx.item.title_guess\n).trim();\n\nconst summary = decode(\n  (webpage && webpage.description) || (article && article.description) || (product && product.description) ||\n  meta('og:description') || meta('description') || ''\n).trim();\n\n// Body text: structured first, then the main content region.\nlet body = '';\nif (article && article.articleBody) body = decode(article.articleBody);\nif (!body || body.length < 300) {\n  const region = html.match(/class=\"[^\"]*(pack-inner-content|article-dt-desc|answer-detail|news-detail|ctm-dt-pages)[^\"]*\"[\\s\\S]{0,120000}/i);\n  if (region) body = strip(region[0]).slice(0, MAX_BODY * 2);\n}\nif (!body) body = summary;\nbody = body.replace(/\\s+\\n/g, '\\n').trim();\n\n// Price facts are only ever copied from structured offers or the page itself.\nconst priceFacts = [];\nif (product && product.offers) {\n  for (const o of [].concat(product.offers)) {\n    const price = o.price || o.lowPrice;\n    if (price) priceFacts.push(`${o.priceCurrency || ''} ${price}${o.highPrice ? ' - ' + o.highPrice : ''}`.trim());\n  }\n}\n\nconst faqs = faqPage && Array.isArray(faqPage.mainEntity)\n  ? faqPage.mainEntity.slice(0, 5).map((q) => ({\n      q: decode(q.name),\n      a: decode(strip(q.acceptedAnswer && q.acceptedAnswer.text)).slice(0, 400),\n    }))\n  : [];\n\nlet category = null;\nif (crumbs && Array.isArray(crumbs.itemListElement)) {\n  const names = crumbs.itemListElement.map((c) => decode(c.name || (c.item && c.item.name) || '')).filter(Boolean);\n  // Home > Medical Articles > <Category> > Title\n  const cand = names.slice(2, -1).find((n) => n && !/^all$/i.test(n));\n  if (cand && cand.length < 60) category = cand;\n}\nconst categoryGroup = classifyCategory(`${category || ''} ${title} ${ctx.item.url}`);\n\nconst ogImage = meta('og:image');\nlet image = ogImage || (article && article.image && (article.image.url || article.image)) ||\n  (product && [].concat(product.image || [])[0]) || ctx.item.image || null;\nif (image && typeof image !== 'string') image = image.url || null;\nif (image && /logo|placeholder|no[-_]?image/i.test(image)) image = null;\n\nconst published = (article && (article.datePublished || article.dateCreated)) || (webpage && webpage.datePublished) || null;\n\n// The exact text the LLM is allowed to use: also stored for audit and for the number check.\nconst truncated = body.length > MAX_BODY ? body.slice(0, MAX_BODY).replace(/\\s+\\S*$/, '') + ' ...' : body;\nconst excerpt = [\n  `TITLE: ${title}`,\n  summary && `SUMMARY: ${summary}`,\n  priceFacts.length && `LISTED PRICE: ${priceFacts.join('; ')}`,\n  `BODY:\\n${truncated}`,\n  faqs.length && `FAQ:\\n${faqs.map((f) => `Q: ${f.q}\\nA: ${f.a}`).join('\\n')}`,\n].filter(Boolean).join('\\n\\n');\n\nif (body.length < 120 && summary.length < 60) {\n  throw new Error(`Extraction too thin for ${ctx.item.url}: page markup may have changed`);\n}\n\nreturn [{\n  json: {\n    ...ctx,\n    post_id: claimed.id,\n    source: {\n      url: ctx.item.url,\n      type: ctx.item.type,\n      title,\n      summary,\n      category: category || categoryGroup,\n      category_group: categoryGroup,\n      image,\n      published_at: published,\n      price_facts: priceFacts,\n      faqs,\n      body_chars: body.length,\n      excerpt,\n      extracted_via: article ? 'json-ld:article' : product ? 'json-ld:product' : 'html',\n    },\n    attempt: 0,\n    attempts_log: [],\n    feedback: [],\n  },\n}];\n"
+      },
+      "id": "fe0bd265-3fa3-4e76-a8de-db428eb083eb",
+      "name": "Extract Content",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2500,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Prompt: writer prompt + JSON schema. On a retry, the previous\n// guardrail findings are fed back so the model fixes exactly what failed.\nconst ctx = $json;\nconst attempt = (ctx.attempt || 0) + 1;\nconst s = ctx.source;\n\nconst system = `You are the social media writer for PlacidWay, a medical tourism marketplace that helps patients compare treatments, clinics and packages abroad.\n\nVoice: warm, clear, trustworthy, patient-first. Informative, never hype. Plain English at roughly an 8th-grade reading level.\n\nHard rules (a compliance checker will reject the post if any is broken):\n1. Use ONLY facts that appear in the SOURCE. No outside knowledge, no statistics, prices, durations, success rates, names or credentials that are not in the SOURCE.\n2. No medical claims or promises of outcomes. Never say or imply: cure, guaranteed, permanent results, risk-free, painless, no side effects, miracle, proven, reverses, eliminates, best/top/#1. Use hedged, patient-education language (\"may\", \"patients often ask\", \"learn what to consider\").\n3. Never invent or estimate prices. Mention a price only if it appears verbatim in the SOURCE, written exactly as the SOURCE writes it, and frame it as \"listed\" or \"starting\" exactly as the source does.\n4. Every value line must be backed by a short verbatim quote from the SOURCE, which you return in \"claims\".\n5. Do not include the URL or hashtags inside hook/lines/cta. They are added separately.\n6. At most one emoji in the hook and none elsewhere.`;\n\nconst feedback = (ctx.feedback || []).length\n  ? `\\n\\nYOUR PREVIOUS DRAFT WAS REJECTED. Fix every issue below and do not repeat them:\\n${ctx.feedback.map((f, i) => `${i + 1}. ${f}`).join('\\n')}\\n`\n  : '';\n\nconst prompt = `Write one Facebook post promoting the PlacidWay page below.\n\nFormat requirements:\n- hook: one scroll-stopping opening line (max 110 characters), a question or a curiosity gap grounded in the source.\n- lines: 2 to 4 short value lines (max 90 characters each) a reader learns from the page.\n- cta: one call to action inviting people to read the full guide / view the package / compare options on PlacidWay (max 80 characters).\n- hashtags: 3 to 5 relevant hashtags, CamelCase, no spaces, without the URL. Include one treatment tag and one destination tag when the source names a destination.\n- claims: for each value line, the verbatim SOURCE quote (8-30 words) that supports it.\n- Total of hook + lines + cta must be under 430 characters.\n\nCONTENT TYPE: ${s.type}\nCATEGORY: ${s.category}\nSOURCE URL: ${s.url}\n\nSOURCE:\n\"\"\"\n${s.excerpt}\n\"\"\"${feedback}`;\n\nconst schema = {\n  type: 'object',\n  additionalProperties: false,\n  required: ['hook', 'lines', 'cta', 'hashtags', 'claims'],\n  properties: {\n    hook: { type: 'string' },\n    lines: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 4 },\n    cta: { type: 'string' },\n    hashtags: { type: 'array', items: { type: 'string' }, minItems: 3, maxItems: 5 },\n    claims: {\n      type: 'array',\n      items: {\n        type: 'object',\n        additionalProperties: false,\n        required: ['line', 'source_quote'],\n        properties: { line: { type: 'string' }, source_quote: { type: 'string' } },\n      },\n    },\n  },\n};\n\nreturn {\n  json: {\n    ...ctx,\n    attempt,\n    llm_request: {\n      model: $env.LLM_MODEL_WRITER || 'sonnet',\n      system,\n      prompt,\n      schema,\n      tag: `${ctx.run.run_id}:write:${attempt}`,\n    },\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "06e3984f-b85d-44b3-a916-ca10a609ce13",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2780,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BRIDGE_URL }}/v1/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-bridge-token",
+              "value": "={{ $env.LLM_BRIDGE_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.llm_request) }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "id": "c1eb53f6-b630-4000-ab86-0cfa7df33641",
+      "name": "Write Post (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3000,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 8000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assemble Post: deterministic formatting around the LLM's parts, so the\n// structure (hook / value lines / CTA / link / hashtags) is guaranteed by code.\n// ---- inlined from lib/guardrails.js ----\n// Shared: post assembly + deterministic guardrails.\n// Used by the pipeline (after generation) and by the dashboard API (when a\n// reviewer edits a draft), so a human edit is held to the same rules.\n\nconst BODY_LIMIT = 500; // characters before the link, per the brief\n\nfunction buildLink(url, utm) {\n  if (!utm) return url;\n  return url + (url.includes('?') ? '&' : '?') + utm;\n}\n\nfunction cleanTag(t) {\n  const core = String(t || '').replace(/^#+/, '').replace(/[^\\p{L}\\p{N}]+/gu, '');\n  return core ? `#${core}` : null;\n}\n\nfunction assemblePost(gen, sourceUrl, utm) {\n  const hook = String(gen.hook || '').trim();\n  const lines = (gen.lines || []).map((l) => String(l).trim().replace(/^[-•*✅▸]\\s*/, '')).filter(Boolean);\n  const cta = String(gen.cta || '').trim();\n  const hashtags = [...new Set((gen.hashtags || []).map(cleanTag).filter(Boolean))];\n  const link = buildLink(sourceUrl, utm);\n  const body = [hook, '', ...lines.map((l) => `• ${l}`), '', cta].join('\\n');\n  const text = `${body}\\n👉 ${link}\\n\\n${hashtags.join(' ')}`;\n  return { hook, lines, cta, hashtags, link, body, text, body_chars: [...body].length };\n}\n\n// Split an edited full post back into parts so edits get the same checks.\nfunction parsePostText(text, sourceUrl) {\n  const t = String(text || '');\n  const linkMatch = t.match(/https?:\\/\\/\\S+/);\n  const link = linkMatch ? linkMatch[0] : '';\n  const idx = linkMatch ? t.indexOf(link) : t.length;\n  const body = t.slice(0, idx).replace(/👉\\s*$/u, '').trimEnd();\n  const after = t.slice(idx + link.length);\n  const hashtags = (after.match(/#[\\p{L}\\p{N}_]+/gu) || []);\n  const parts = body.split('\\n').map((s) => s.trim()).filter(Boolean);\n  const hook = parts[0] || '';\n  const bulletLines = parts.filter((p) => /^[•\\-*✅▸]/.test(p)).map((p) => p.replace(/^[•\\-*✅▸]\\s*/, ''));\n  const cta = parts.length > 1 ? parts[parts.length - 1] : '';\n  return { hook, lines: bulletLines, cta, hashtags, link, body, text: t, body_chars: [...body].length, source_url: sourceUrl };\n}\n\n// Medical-claim language that must never appear, regardless of source wording.\nconst BANNED = [\n  [/\\bcur(e|es|ed|ing)\\b/i, 'promises a cure'],\n  [/\\bguarantee(d|s)?\\b/i, 'guarantees an outcome'],\n  [/\\b100\\s?%/i, 'absolute (100%) claim'],\n  [/\\brisk[- ]?free\\b|\\bno risks?\\b|\\bzero risk\\b/i, 'claims no risk'],\n  [/\\bno side[- ]effects?\\b|\\bwithout side[- ]effects?\\b/i, 'claims no side effects'],\n  [/\\bpainless\\b|\\bpain[- ]free\\b/i, 'claims painless treatment'],\n  [/\\bpermanent(ly)?\\s+(results?|fix|solution|cure)\\b/i, 'promises permanent results'],\n  [/\\bmiracle|\\bmiraculous\\b/i, 'miracle language'],\n  [/\\b(clinically\\s+)?proven\\b/i, '\"proven\" efficacy claim'],\n  [/\\brevers(e|es|ed|ing)\\b/i, 'claims to reverse a condition'],\n  [/\\b(eliminate|eradicate)s?\\b/i, 'claims to eliminate a condition'],\n  [/\\bheal(s|ed)?\\s+(your|the|any)\\b/i, 'claims to heal'],\n  [/\\b(completely|totally|perfectly|100%)\\s+safe\\b/i, 'absolute safety claim'],\n  [/\\bfda[- ]approved\\b/i, 'regulatory approval claim'],\n  [/\\binstant(ly)?\\s+results?\\b/i, 'instant results claim'],\n  [/\\bwill\\s+(fix|cure|restore|transform)\\b/i, 'promises an outcome'],\n];\n\nconst NEGATION = /\\b(not|no|never|without|isn't|aren't|doesn't|don't|cannot|can't|nor)\\b|n't\\b/;\n\n// Superlatives allowed only if the source itself uses them.\nconst SUPERLATIVES = /\\b(best|#1|number one|top[- ]rated|world[- ]class|leading|cheapest|lowest price)\\b/gi;\n\nconst norm = (s) => String(s || '').toLowerCase().replace(/[‘’]/g, \"'\").replace(/[“”]/g, '\"')\n  .replace(/[^\\p{L}\\p{N}%$.,'\\s]/gu, ' ').replace(/\\s+/g, ' ').trim();\n\n// Numbers as they appear in prose: 1,200 / 82% / 3.5 / 2025 -> canonical digits.\nfunction numbersIn(text) {\n  const found = String(text || '').match(/\\d[\\d,]*(\\.\\d+)?/g) || [];\n  return found.map((n) => n.replace(/,/g, '').replace(/\\.0+$/, '')).filter((n) => n.length > 0);\n}\n\nfunction quoteSupported(quote, sourceNorm) {\n  const q = norm(quote);\n  if (!q) return false;\n  if (sourceNorm.includes(q)) return true;\n  // Tolerate small edits (punctuation, a dropped word): 4-word shingle overlap.\n  const w = q.split(' ');\n  if (w.length < 4) return sourceNorm.includes(q);\n  let hit = 0, total = 0;\n  for (let i = 0; i + 4 <= w.length; i++) { total++; if (sourceNorm.includes(w.slice(i, i + 4).join(' '))) hit++; }\n  return total > 0 && hit / total >= 0.6;\n}\n\nfunction runRuleChecks(post, source, claims) {\n  const excerpt = source.excerpt || '';\n  const sourceNorm = norm(excerpt);\n  const sourceNums = new Set(numbersIn(excerpt));\n  const checks = [];\n  const add = (id, label, pass, detail) => checks.push({ id, label, pass: !!pass, detail: detail || '' });\n\n  add('structure', 'Hook, 2–4 value lines and a CTA',\n    post.hook && post.cta && post.lines.length >= 2 && post.lines.length <= 4,\n    `hook=${post.hook ? 'yes' : 'no'}, lines=${post.lines.length}, cta=${post.cta ? 'yes' : 'no'}`);\n\n  add('length', `Under ${BODY_LIMIT} characters before the link`, post.body_chars < BODY_LIMIT, `${post.body_chars} chars`);\n\n  const badTags = post.hashtags.filter((h) => !/^#[\\p{L}\\p{N}]{2,40}$/u.test(h));\n  add('hashtags', '3–5 well-formed hashtags',\n    post.hashtags.length >= 3 && post.hashtags.length <= 5 && badTags.length === 0,\n    `${post.hashtags.length} tags${badTags.length ? `; malformed: ${badTags.join(' ')}` : ''}`);\n\n  const linkOk = post.link && post.link.split('?')[0].replace(/\\/$/, '') === String(source.url).split('?')[0].replace(/\\/$/, '');\n  add('link', 'Links to the exact source page', linkOk, post.link || 'missing');\n\n  const prose = `${post.hook}\\n${post.lines.join('\\n')}\\n${post.cta}`;\n  const bannedHits = [];\n  for (const [re, why] of BANNED) {\n    const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');\n    for (const m of prose.matchAll(g)) {\n      // Cautionary phrasing (\"is not proven\", \"no guarantee of results\") is the compliant way\n      // to talk about evidence, so a negation just before the term clears it.\n      const before = prose.slice(Math.max(0, m.index - 28), m.index).toLowerCase();\n      if (NEGATION.test(before)) continue;\n      bannedHits.push(`${why} (\"${m[0]}\")`);\n      break;\n    }\n  }\n  add('medical_claims', 'No medical claims or outcome promises', bannedHits.length === 0, bannedHits.join('; ') || 'clean');\n\n  const supers = [...new Set((prose.match(SUPERLATIVES) || []).map((s) => s.toLowerCase()))]\n    .filter((s) => !sourceNorm.includes(s));\n  add('superlatives', 'No unsupported superlatives', supers.length === 0, supers.join(', ') || 'clean');\n\n  const unknownNums = [...new Set(numbersIn(prose))].filter((n) => !sourceNums.has(n));\n  add('numbers', 'Every number appears in the source', unknownNums.length === 0,\n    unknownNums.length ? `not in source: ${unknownNums.join(', ')}` : `${numbersIn(prose).length} numbers verified`);\n\n  const priceRe = /(?:[$€£]|\\b(?:usd|eur|gbp|mxn|cad|aud)\\b)\\s?\\d[\\d,.]*|\\d[\\d,.]*\\s?(?:usd|eur|gbp|mxn|dollars|euros)\\b/gi;\n  const prices = prose.match(priceRe) || [];\n  const badPrices = prices.filter((p) => numbersIn(p).some((n) => !sourceNums.has(n)));\n  add('prices', 'No invented prices', badPrices.length === 0,\n    prices.length ? (badPrices.length ? `not in source: ${badPrices.join(', ')}` : `${prices.join(', ')} found in source`) : 'no prices mentioned');\n\n  if (claims) {\n    const unsupported = (claims || []).filter((c) => !quoteSupported(c.source_quote, sourceNorm));\n    const covered = claims.length >= post.lines.length;\n    add('grounding', 'Each value line is backed by a verbatim source quote',\n      covered && unsupported.length === 0,\n      !covered ? `${claims.length} quotes for ${post.lines.length} lines`\n        : unsupported.length ? `quote not found in source: \"${unsupported[0].source_quote.slice(0, 80)}\"` : `${claims.length}/${claims.length} quotes located in source`);\n  }\n\n  return { pass: checks.every((c) => c.pass), checks };\n}\n// ---- end lib/guardrails.js ----\nconst ctx = $('Build Prompt').item.json;\nconst res = $json;\nif (!res.ok || !res.data) throw new Error(`Writer LLM returned no usable output: ${res.error || 'empty response'}`);\n\nconst gen = res.data;\nconst post = assemblePost(gen, ctx.source.url, $env.PW_UTM || '');\nconst { llm_request, ...rest } = ctx;\nreturn {\n  json: {\n    ...rest,\n    gen: { ...gen, model: res.model, duration_ms: res.duration_ms, cost_usd: res.cost_usd ?? null },\n    post,\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "37cf2a50-a866-46c8-a4a1-5bef2294c875",
+      "name": "Assemble Post",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Rule-Based Checks: fast, explainable, zero-cost guardrails that run before\n// (and independently of) the LLM reviewer. A single failure blocks auto-publish.\n// ---- inlined from lib/guardrails.js ----\n// Shared: post assembly + deterministic guardrails.\n// Used by the pipeline (after generation) and by the dashboard API (when a\n// reviewer edits a draft), so a human edit is held to the same rules.\n\nconst BODY_LIMIT = 500; // characters before the link, per the brief\n\nfunction buildLink(url, utm) {\n  if (!utm) return url;\n  return url + (url.includes('?') ? '&' : '?') + utm;\n}\n\nfunction cleanTag(t) {\n  const core = String(t || '').replace(/^#+/, '').replace(/[^\\p{L}\\p{N}]+/gu, '');\n  return core ? `#${core}` : null;\n}\n\nfunction assemblePost(gen, sourceUrl, utm) {\n  const hook = String(gen.hook || '').trim();\n  const lines = (gen.lines || []).map((l) => String(l).trim().replace(/^[-•*✅▸]\\s*/, '')).filter(Boolean);\n  const cta = String(gen.cta || '').trim();\n  const hashtags = [...new Set((gen.hashtags || []).map(cleanTag).filter(Boolean))];\n  const link = buildLink(sourceUrl, utm);\n  const body = [hook, '', ...lines.map((l) => `• ${l}`), '', cta].join('\\n');\n  const text = `${body}\\n👉 ${link}\\n\\n${hashtags.join(' ')}`;\n  return { hook, lines, cta, hashtags, link, body, text, body_chars: [...body].length };\n}\n\n// Split an edited full post back into parts so edits get the same checks.\nfunction parsePostText(text, sourceUrl) {\n  const t = String(text || '');\n  const linkMatch = t.match(/https?:\\/\\/\\S+/);\n  const link = linkMatch ? linkMatch[0] : '';\n  const idx = linkMatch ? t.indexOf(link) : t.length;\n  const body = t.slice(0, idx).replace(/👉\\s*$/u, '').trimEnd();\n  const after = t.slice(idx + link.length);\n  const hashtags = (after.match(/#[\\p{L}\\p{N}_]+/gu) || []);\n  const parts = body.split('\\n').map((s) => s.trim()).filter(Boolean);\n  const hook = parts[0] || '';\n  const bulletLines = parts.filter((p) => /^[•\\-*✅▸]/.test(p)).map((p) => p.replace(/^[•\\-*✅▸]\\s*/, ''));\n  const cta = parts.length > 1 ? parts[parts.length - 1] : '';\n  return { hook, lines: bulletLines, cta, hashtags, link, body, text: t, body_chars: [...body].length, source_url: sourceUrl };\n}\n\n// Medical-claim language that must never appear, regardless of source wording.\nconst BANNED = [\n  [/\\bcur(e|es|ed|ing)\\b/i, 'promises a cure'],\n  [/\\bguarantee(d|s)?\\b/i, 'guarantees an outcome'],\n  [/\\b100\\s?%/i, 'absolute (100%) claim'],\n  [/\\brisk[- ]?free\\b|\\bno risks?\\b|\\bzero risk\\b/i, 'claims no risk'],\n  [/\\bno side[- ]effects?\\b|\\bwithout side[- ]effects?\\b/i, 'claims no side effects'],\n  [/\\bpainless\\b|\\bpain[- ]free\\b/i, 'claims painless treatment'],\n  [/\\bpermanent(ly)?\\s+(results?|fix|solution|cure)\\b/i, 'promises permanent results'],\n  [/\\bmiracle|\\bmiraculous\\b/i, 'miracle language'],\n  [/\\b(clinically\\s+)?proven\\b/i, '\"proven\" efficacy claim'],\n  [/\\brevers(e|es|ed|ing)\\b/i, 'claims to reverse a condition'],\n  [/\\b(eliminate|eradicate)s?\\b/i, 'claims to eliminate a condition'],\n  [/\\bheal(s|ed)?\\s+(your|the|any)\\b/i, 'claims to heal'],\n  [/\\b(completely|totally|perfectly|100%)\\s+safe\\b/i, 'absolute safety claim'],\n  [/\\bfda[- ]approved\\b/i, 'regulatory approval claim'],\n  [/\\binstant(ly)?\\s+results?\\b/i, 'instant results claim'],\n  [/\\bwill\\s+(fix|cure|restore|transform)\\b/i, 'promises an outcome'],\n];\n\nconst NEGATION = /\\b(not|no|never|without|isn't|aren't|doesn't|don't|cannot|can't|nor)\\b|n't\\b/;\n\n// Superlatives allowed only if the source itself uses them.\nconst SUPERLATIVES = /\\b(best|#1|number one|top[- ]rated|world[- ]class|leading|cheapest|lowest price)\\b/gi;\n\nconst norm = (s) => String(s || '').toLowerCase().replace(/[‘’]/g, \"'\").replace(/[“”]/g, '\"')\n  .replace(/[^\\p{L}\\p{N}%$.,'\\s]/gu, ' ').replace(/\\s+/g, ' ').trim();\n\n// Numbers as they appear in prose: 1,200 / 82% / 3.5 / 2025 -> canonical digits.\nfunction numbersIn(text) {\n  const found = String(text || '').match(/\\d[\\d,]*(\\.\\d+)?/g) || [];\n  return found.map((n) => n.replace(/,/g, '').replace(/\\.0+$/, '')).filter((n) => n.length > 0);\n}\n\nfunction quoteSupported(quote, sourceNorm) {\n  const q = norm(quote);\n  if (!q) return false;\n  if (sourceNorm.includes(q)) return true;\n  // Tolerate small edits (punctuation, a dropped word): 4-word shingle overlap.\n  const w = q.split(' ');\n  if (w.length < 4) return sourceNorm.includes(q);\n  let hit = 0, total = 0;\n  for (let i = 0; i + 4 <= w.length; i++) { total++; if (sourceNorm.includes(w.slice(i, i + 4).join(' '))) hit++; }\n  return total > 0 && hit / total >= 0.6;\n}\n\nfunction runRuleChecks(post, source, claims) {\n  const excerpt = source.excerpt || '';\n  const sourceNorm = norm(excerpt);\n  const sourceNums = new Set(numbersIn(excerpt));\n  const checks = [];\n  const add = (id, label, pass, detail) => checks.push({ id, label, pass: !!pass, detail: detail || '' });\n\n  add('structure', 'Hook, 2–4 value lines and a CTA',\n    post.hook && post.cta && post.lines.length >= 2 && post.lines.length <= 4,\n    `hook=${post.hook ? 'yes' : 'no'}, lines=${post.lines.length}, cta=${post.cta ? 'yes' : 'no'}`);\n\n  add('length', `Under ${BODY_LIMIT} characters before the link`, post.body_chars < BODY_LIMIT, `${post.body_chars} chars`);\n\n  const badTags = post.hashtags.filter((h) => !/^#[\\p{L}\\p{N}]{2,40}$/u.test(h));\n  add('hashtags', '3–5 well-formed hashtags',\n    post.hashtags.length >= 3 && post.hashtags.length <= 5 && badTags.length === 0,\n    `${post.hashtags.length} tags${badTags.length ? `; malformed: ${badTags.join(' ')}` : ''}`);\n\n  const linkOk = post.link && post.link.split('?')[0].replace(/\\/$/, '') === String(source.url).split('?')[0].replace(/\\/$/, '');\n  add('link', 'Links to the exact source page', linkOk, post.link || 'missing');\n\n  const prose = `${post.hook}\\n${post.lines.join('\\n')}\\n${post.cta}`;\n  const bannedHits = [];\n  for (const [re, why] of BANNED) {\n    const g = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');\n    for (const m of prose.matchAll(g)) {\n      // Cautionary phrasing (\"is not proven\", \"no guarantee of results\") is the compliant way\n      // to talk about evidence, so a negation just before the term clears it.\n      const before = prose.slice(Math.max(0, m.index - 28), m.index).toLowerCase();\n      if (NEGATION.test(before)) continue;\n      bannedHits.push(`${why} (\"${m[0]}\")`);\n      break;\n    }\n  }\n  add('medical_claims', 'No medical claims or outcome promises', bannedHits.length === 0, bannedHits.join('; ') || 'clean');\n\n  const supers = [...new Set((prose.match(SUPERLATIVES) || []).map((s) => s.toLowerCase()))]\n    .filter((s) => !sourceNorm.includes(s));\n  add('superlatives', 'No unsupported superlatives', supers.length === 0, supers.join(', ') || 'clean');\n\n  const unknownNums = [...new Set(numbersIn(prose))].filter((n) => !sourceNums.has(n));\n  add('numbers', 'Every number appears in the source', unknownNums.length === 0,\n    unknownNums.length ? `not in source: ${unknownNums.join(', ')}` : `${numbersIn(prose).length} numbers verified`);\n\n  const priceRe = /(?:[$€£]|\\b(?:usd|eur|gbp|mxn|cad|aud)\\b)\\s?\\d[\\d,.]*|\\d[\\d,.]*\\s?(?:usd|eur|gbp|mxn|dollars|euros)\\b/gi;\n  const prices = prose.match(priceRe) || [];\n  const badPrices = prices.filter((p) => numbersIn(p).some((n) => !sourceNums.has(n)));\n  add('prices', 'No invented prices', badPrices.length === 0,\n    prices.length ? (badPrices.length ? `not in source: ${badPrices.join(', ')}` : `${prices.join(', ')} found in source`) : 'no prices mentioned');\n\n  if (claims) {\n    const unsupported = (claims || []).filter((c) => !quoteSupported(c.source_quote, sourceNorm));\n    const covered = claims.length >= post.lines.length;\n    add('grounding', 'Each value line is backed by a verbatim source quote',\n      covered && unsupported.length === 0,\n      !covered ? `${claims.length} quotes for ${post.lines.length} lines`\n        : unsupported.length ? `quote not found in source: \"${unsupported[0].source_quote.slice(0, 80)}\"` : `${claims.length}/${claims.length} quotes located in source`);\n  }\n\n  return { pass: checks.every((c) => c.pass), checks };\n}\n// ---- end lib/guardrails.js ----\nconst ctx = $json;\nconst rules = runRuleChecks(ctx.post, ctx.source, ctx.gen.claims || []);\nreturn { json: { ...ctx, guardrail: { rules } } };\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "eea6eb2e-ab4f-4348-a73b-e46e34ba6b1d",
+      "name": "Rule-Based Checks",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3440,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Review Prompt: an independent second model (cheaper, different prompt,\n// no access to the writer's instructions) audits the post against the source.\nconst ctx = $json;\nconst system = `You are a strict medical-marketing compliance reviewer for a healthcare marketplace.\nYou audit a social media post against its SOURCE page. You did not write the post.\nFlag, with high severity:\n- medical_claim: any claim or implication of cure, guaranteed or permanent outcome, safety absolutes, efficacy (\"works\", \"fixes\", \"restores\") or promise of results.\n- unsupported_fact: any fact, number, statistic, name, credential, location, duration or comparison NOT stated in the SOURCE. Paraphrase is fine when the meaning is preserved.\n- invented_price: any price, cost, saving or discount not stated verbatim in the SOURCE.\nFlag with medium severity: misleading framing, fear-based or pressuring language, implying PlacidWay itself provides treatment.\nFlag with low severity: tone/style suggestions.\nReturn verdict \"fail\" if there is ANY high or medium issue, otherwise \"pass\". Quote the exact offending text in \"excerpt\". Be precise; do not invent issues.`;\n\nconst prompt = `SOURCE:\n\"\"\"\n${ctx.source.excerpt}\n\"\"\"\n\nPOST TO AUDIT:\n\"\"\"\n${ctx.post.text}\n\"\"\"\n\nAudit every sentence of the post (ignore the URL and hashtags).`;\n\nconst schema = {\n  type: 'object',\n  additionalProperties: false,\n  required: ['verdict', 'issues', 'summary'],\n  properties: {\n    verdict: { type: 'string', enum: ['pass', 'fail'] },\n    summary: { type: 'string' },\n    issues: {\n      type: 'array',\n      items: {\n        type: 'object',\n        additionalProperties: false,\n        required: ['type', 'severity', 'excerpt', 'explanation'],\n        properties: {\n          type: { type: 'string', enum: ['medical_claim', 'unsupported_fact', 'invented_price', 'tone', 'other'] },\n          severity: { type: 'string', enum: ['high', 'medium', 'low'] },\n          excerpt: { type: 'string' },\n          explanation: { type: 'string' },\n        },\n      },\n    },\n  },\n};\n\nreturn {\n  json: {\n    ...ctx,\n    llm_request: { model: $env.LLM_MODEL_REVIEWER || 'haiku', system, prompt, schema, tag: `${ctx.run.run_id}:review:${ctx.attempt}` },\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "25245c3b-869a-4942-a161-bc37924cf847",
+      "name": "Build Review Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        3660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.LLM_BRIDGE_URL }}/v1/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-bridge-token",
+              "value": "={{ $env.LLM_BRIDGE_TOKEN }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.llm_request) }}",
+        "options": {
+          "timeout": 240000
+        }
+      },
+      "id": "d4aff229-4c39-4e41-aef3-45a2a8514b04",
+      "name": "Fact-Check (Claude)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3880,
+        300
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 8000,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Guardrail Verdict: combine both layers and decide.\n//   pass                 -> continue (auto: publish, approval: queue for review)\n//   fail, attempts left  -> loop back to the writer with the findings\n//   fail, out of attempts-> escalate to a human as \"needs_review\" (never auto-publishes)\nconst { llm_request, ...ctx } = $('Build Review Prompt').item.json;\nconst res = $json;\nconst maxAttempts = Number(ctx.settings.max_attempts || 3);\n\nlet llm;\nif (res.ok && res.data) {\n  const issues = res.data.issues || [];\n  const blocking = issues.filter((i) => i.severity === 'high' || i.severity === 'medium');\n  llm = { verdict: blocking.length ? 'fail' : 'pass', model_verdict: res.data.verdict, summary: res.data.summary, issues, model: res.model };\n} else {\n  // Reviewer unavailable: fail closed. The draft can still go to a human.\n  llm = { verdict: 'fail', summary: `Reviewer unavailable: ${res.error || 'no output'}`, issues: [], unavailable: true };\n}\n\nconst rules = ctx.guardrail.rules;\nconst passed = rules.pass && llm.verdict === 'pass';\n\nconst feedback = [\n  ...rules.checks.filter((c) => !c.pass).map((c) => `${c.label}: ${c.detail}`),\n  ...llm.issues.filter((i) => i.severity !== 'low').map((i) => `${i.type.replace('_', ' ')}: \"${i.excerpt}\": ${i.explanation}`),\n];\n\nconst attempts_log = [...(ctx.attempts_log || []), {\n  attempt: ctx.attempt,\n  passed,\n  post_text: ctx.post.text,\n  failed_rules: rules.checks.filter((c) => !c.pass).map((c) => c.id),\n  llm_verdict: llm.verdict,\n  llm_issues: llm.issues.length,\n}];\n\nlet route;\nlet status = null;\nif (passed) {\n  route = 'done';\n  status = ctx.settings.publish_mode === 'auto' ? 'approved' : 'pending_approval';\n} else if (ctx.attempt < maxAttempts && !llm.unavailable) {\n  route = 'retry';\n} else {\n  route = 'done';\n  status = 'needs_review';\n}\n\nreturn {\n  json: {\n    ...ctx,\n    guardrail: { rules, llm, passed, attempts: ctx.attempt, checked_at: new Date().toISOString() },\n    feedback,\n    attempts_log,\n    route,\n    status,\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "22c63526-7602-408c-a6a4-b49c7c04014b",
+      "name": "Guardrail Verdict",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "a16a0487-de61-478b-9ccd-15472a25d075",
+              "leftValue": "={{ $json.route === 'retry' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "0030b18d-fc53-4d56-a0ff-be7f8b9c6e88",
+      "name": "Retry?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        4100,
+        560
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Media: decide how the image is produced.\n//   brand -> download featured image, add PlacidWay brand bar\n//   card  -> no usable image: render a branded title card\n//   none  -> branding disabled: Facebook pulls the original image URL directly\nconst ctx = $json;\nconst brand = String(ctx.settings.brand_images) !== 'false';\nconst labels = { article: 'PATIENT GUIDE', package: 'TREATMENT PACKAGE', answer: 'PATIENT Q&A', news: 'PLACIDWAY NEWS' };\nlet title = ctx.source.title.replace(/\\s*\\|\\s*.*$/, '').trim();\nif (title.length > 96) title = title.slice(0, 93).replace(/\\s+\\S*$/, '') + '...';\n\nconst route = !brand ? 'none' : ctx.source.image ? 'brand' : 'card';\n\n// PlacidWay serves images through Cloudflare (/cdn-cgi/image/, allowed in robots.txt).\n// Ask it for a full-bleed 1200x630 smart crop instead of the white-padded OG version.\nlet downloadUrl = ctx.source.image;\nif (downloadUrl) {\n  const COVER = 'quality=85,fit=cover,gravity=auto,width=1200,height=630';\n  const m = downloadUrl.match(/^(https:\\/\\/www\\.placidway\\.com\\/cdn-cgi\\/image\\/)[^/]+\\/(.+)$/);\n  if (m) downloadUrl = `${m[1]}${COVER}/${m[2]}`;\n  else if (/^https:\\/\\/placidwaycdn\\.s3\\.amazonaws\\.com\\//.test(downloadUrl)) downloadUrl = `https://www.placidway.com/cdn-cgi/image/${COVER}/${downloadUrl}`;\n}\nreturn {\n  json: {\n    ...ctx,\n    media: {\n      route,\n      file: `post-${ctx.post_id}.jpg`,\n      download_url: downloadUrl,\n      label: labels[ctx.source.type] || 'PLACIDWAY',\n      category: String(ctx.source.category_group || ctx.source.category || '').toUpperCase(),\n      title,\n    },\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "8c1a253a-c338-4901-ad39-f8e4835a898d",
+      "name": "Prepare Media",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        4400,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 3,
+        "output": "={{ ['brand', 'card', 'none'].indexOf($json.media.route) }}"
+      },
+      "id": "b116820e-2dcc-44a4-aace-279738922730",
+      "name": "Media Route",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        4620,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.media.download_url }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "e4937908-d99c-4a1d-a5b2-c2a01887265c",
+      "name": "Download Image",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        4840,
+        140
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "multiStep",
+        "operations": {
+          "operations": [
+            {
+              "operation": "resize",
+              "width": 1200,
+              "height": 630,
+              "resizeOption": "minimumArea"
+            },
+            {
+              "operation": "crop",
+              "width": 1200,
+              "height": 630,
+              "positionX": 0,
+              "positionY": 0
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#222222",
+              "startPositionX": 0,
+              "startPositionY": 560,
+              "endPositionX": 1200,
+              "endPositionY": 630
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#E85A4F",
+              "startPositionX": 0,
+              "startPositionY": 554,
+              "endPositionX": 1200,
+              "endPositionY": 560
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#E85A4F",
+              "startPositionX": 40,
+              "startPositionY": 579,
+              "endPositionX": 50,
+              "endPositionY": 611
+            },
+            {
+              "operation": "text",
+              "text": "PlacidWay",
+              "fontSize": 30,
+              "fontColor": "#FFFFFF",
+              "positionX": 64,
+              "positionY": 606,
+              "lineLength": 40,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf",
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north"
+            },
+            {
+              "operation": "text",
+              "text": "={{ $('Prepare Media').item.json.media.label + '   ·   ' + $('Prepare Media').item.json.media.category }}",
+              "fontSize": 19,
+              "fontColor": "#F2C79C",
+              "positionX": 232,
+              "positionY": 603,
+              "lineLength": 80,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north"
+            },
+            {
+              "operation": "text",
+              "text": "placidway.com",
+              "fontSize": 19,
+              "fontColor": "#BDB6AE",
+              "positionX": 40,
+              "positionY": 603,
+              "lineLength": 40,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+              "horizontalAlignment": "east",
+              "verticalAlignment": "north"
+            }
+          ]
+        },
+        "options": {
+          "format": "jpeg",
+          "quality": 88
+        }
+      },
+      "id": "7343692b-3e23-4414-ab98-f90a4687e8bf",
+      "name": "Brand Image",
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1.1,
+      "position": [
+        5060,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "multiStep",
+        "operations": {
+          "operations": [
+            {
+              "operation": "create",
+              "backgroundColor": "#F3F0EB",
+              "width": 1200,
+              "height": 630
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#E85A4F",
+              "startPositionX": 0,
+              "startPositionY": 0,
+              "endPositionX": 16,
+              "endPositionY": 554
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#F2C79C",
+              "startPositionX": 80,
+              "startPositionY": 128,
+              "endPositionX": 160,
+              "endPositionY": 132
+            },
+            {
+              "operation": "text",
+              "text": "={{ $('Prepare Media').item.json.media.label }}",
+              "fontSize": 22,
+              "fontColor": "#A9362D",
+              "positionX": 80,
+              "positionY": 110,
+              "lineLength": 60,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf",
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north"
+            },
+            {
+              "operation": "text",
+              "text": "={{ $('Prepare Media').item.json.media.title }}",
+              "fontSize": 54,
+              "fontColor": "#222222",
+              "positionX": 80,
+              "positionY": 210,
+              "lineLength": 32,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Georgia_Bold.ttf",
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north"
+            },
+            {
+              "operation": "text",
+              "text": "={{ $('Prepare Media').item.json.media.category }}",
+              "fontSize": 19,
+              "fontColor": "#6B6560",
+              "positionX": 80,
+              "positionY": 522,
+              "lineLength": 80,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north"
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#222222",
+              "startPositionX": 0,
+              "startPositionY": 560,
+              "endPositionX": 1200,
+              "endPositionY": 630
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#E85A4F",
+              "startPositionX": 0,
+              "startPositionY": 554,
+              "endPositionX": 1200,
+              "endPositionY": 560
+            },
+            {
+              "operation": "draw",
+              "primitive": "rectangle",
+              "color": "#E85A4F",
+              "startPositionX": 80,
+              "startPositionY": 579,
+              "endPositionX": 90,
+              "endPositionY": 611
+            },
+            {
+              "operation": "text",
+              "text": "PlacidWay",
+              "fontSize": 30,
+              "fontColor": "#FFFFFF",
+              "positionX": 104,
+              "positionY": 606,
+              "lineLength": 40,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Arial_Bold.ttf",
+              "horizontalAlignment": "west",
+              "verticalAlignment": "north"
+            },
+            {
+              "operation": "text",
+              "text": "placidway.com",
+              "fontSize": 19,
+              "fontColor": "#BDB6AE",
+              "positionX": 40,
+              "positionY": 603,
+              "lineLength": 40,
+              "font": "/usr/share/fonts/truetype/msttcorefonts/Arial.ttf",
+              "horizontalAlignment": "east",
+              "verticalAlignment": "north"
+            }
+          ]
+        },
+        "options": {
+          "format": "jpeg",
+          "quality": 90
+        }
+      },
+      "id": "0f73651c-6551-4cff-af22-b1af69222391",
+      "name": "Render Card",
+      "type": "n8n-nodes-base.editImage",
+      "typeVersion": 1.1,
+      "position": [
+        5060,
+        360
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/files/media/{{ $('Prepare Media').item.json.media.file }}",
+        "dataPropertyName": "data",
+        "options": {}
+      },
+      "id": "c2b573a6-2f36-49a5-acae-ca69ce712efd",
+      "name": "Save Media",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        5200,
+        260
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Draft Record: map the run context onto the posts row (parameterised SQL).\nconst ctx = $('Prepare Media').item.json;\nconst mediaPath = ctx.media.route === 'none' ? null : `media/${ctx.media.file}`;\nconst dryRun = String(ctx.settings.dry_run) !== 'false';\nreturn {\n  json: {\n    ...ctx,\n    media_path: mediaPath,\n    params: [\n      ctx.post_id,\n      ctx.source.title,\n      ctx.source.summary,\n      ctx.source.category,\n      ctx.source.image,\n      mediaPath,\n      ctx.source.excerpt,\n      ctx.source.published_at,\n      ctx.post.text,\n      ctx.post.hook,\n      JSON.stringify(ctx.post.hashtags),\n      JSON.stringify(ctx.gen.claims || []),\n      JSON.stringify({ ...ctx.guardrail, attempts_log: ctx.attempts_log, selection: ctx.selection, extracted_via: ctx.source.extracted_via, writer_model: ctx.gen.model }),\n      ctx.attempt,\n      ctx.status,\n      dryRun,\n      ctx.run.run_id,\n    ],\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "e78057fa-4a5a-46b6-a3a0-5a1b6d7209ed",
+      "name": "Draft Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        5420,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE posts SET title = $2, summary = $3, category = $4, image_url = $5, media_path = $6, source_excerpt = $7,\n       source_published_at = $8::timestamptz, post_text = $9, hook = $10,\n       hashtags = ARRAY(SELECT jsonb_array_elements_text($11::jsonb)), claims = $12::jsonb, guardrail = $13::jsonb,\n       attempts = $14, status = $15, dry_run = $16::boolean, run_id = $17, updated_at = now()\n     WHERE id = $1 RETURNING id, status",
+        "options": {
+          "queryReplacement": "={{ $json.params }}"
+        }
+      },
+      "id": "c60cf31c-65ed-4d5b-a1e8-46660d71eff0",
+      "name": "Save Draft",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        5720,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "87a51830-8460-4d1e-b9e4-3acbc4a77f7e",
+              "leftValue": "={{ $json.status === 'approved' }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "20ebc009-8312-4436-aaea-5b730ab8d169",
+      "name": "Auto-Publish?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        5940,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "pwPublishPost001",
+          "mode": "id"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "313a2df9-d68d-49d3-a98b-eaa34066b88d",
+      "name": "Publish Post",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.2,
+      "position": [
+        6160,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Finish Run: summarise the run for the runs table.\nconst ctx = $('Draft Record').item.json;\nconst pub = $input.first().json || {};\nconst published = pub.status === 'published' || pub.status === 'scheduled';\nconst status = ctx.status === 'needs_review' ? 'needs_review'\n  : pub.status === 'failed' ? 'error'\n  : 'success';\nreturn {\n  json: {\n    run_id: ctx.run.run_id,\n    status,\n    post_id: ctx.post_id,\n    fb_post_id: pub.fb_post_id || null,\n    error: pub.error || null,\n    details: JSON.stringify({\n      final_status: pub.status || ctx.status,\n      attempts: ctx.attempt,\n      guardrail_passed: ctx.guardrail.passed,\n      selection: ctx.selection,\n      title: ctx.source.title,\n      published,\n    }),\n  },\n};\n"
+      },
+      "id": "c7737acb-1786-4deb-a9be-6b1613f3e7c4",
+      "name": "Finish Run",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        6380,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "UPDATE runs SET status = $2, post_id = $3, fb_post_id = $4, error = $5, details = $6::jsonb,\n       item_url = (SELECT source_url FROM posts WHERE id = $3), finished_at = now()\n     WHERE run_id = $1",
+        "options": {
+          "queryReplacement": "={{ [ $json.run_id, $json.status, $json.post_id, $json.fb_post_id, $json.error, $json.details ] }}"
+        }
+      },
+      "id": "e05f127a-b1ba-429c-a9d7-d974430a8d31",
+      "name": "Close Run",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        6600,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 07:00": {
+      "main": [
+        [
+          {
+            "node": "Start Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Run": {
+      "main": [
+        [
+          {
+            "node": "Start Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "From Dashboard": {
+      "main": [
+        [
+          {
+            "node": "Start Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Start Run": {
+      "main": [
+        [
+          {
+            "node": "Load Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load Settings": {
+      "main": [
+        [
+          {
+            "node": "Log Run Start",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Run Start": {
+      "main": [
+        [
+          {
+            "node": "Sitemap Targets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sitemap Targets": {
+      "main": [
+        [
+          {
+            "node": "Fetch Sitemaps",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Sitemaps": {
+      "main": [
+        [
+          {
+            "node": "Pick Candidate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Candidate": {
+      "main": [
+        [
+          {
+            "node": "Found Item?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Found Item?": {
+      "main": [
+        [
+          {
+            "node": "Claim URL",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing To Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim URL": {
+      "main": [
+        [
+          {
+            "node": "Claimed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claimed?": {
+      "main": [
+        [
+          {
+            "node": "Polite Delay",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nothing To Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Polite Delay": {
+      "main": [
+        [
+          {
+            "node": "Fetch Page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Page": {
+      "main": [
+        [
+          {
+            "node": "Extract Content",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Content": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Prompt": {
+      "main": [
+        [
+          {
+            "node": "Write Post (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Post (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Assemble Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assemble Post": {
+      "main": [
+        [
+          {
+            "node": "Rule-Based Checks",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Rule-Based Checks": {
+      "main": [
+        [
+          {
+            "node": "Build Review Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Review Prompt": {
+      "main": [
+        [
+          {
+            "node": "Fact-Check (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fact-Check (Claude)": {
+      "main": [
+        [
+          {
+            "node": "Guardrail Verdict",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Guardrail Verdict": {
+      "main": [
+        [
+          {
+            "node": "Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Retry?": {
+      "main": [
+        [
+          {
+            "node": "Build Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Media": {
+      "main": [
+        [
+          {
+            "node": "Media Route",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Media Route": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Render Card",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Draft Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Brand Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Render Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Brand Image": {
+      "main": [
+        [
+          {
+            "node": "Save Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Render Card": {
+      "main": [
+        [
+          {
+            "node": "Save Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Media": {
+      "main": [
+        [
+          {
+            "node": "Draft Record",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Record": {
+      "main": [
+        [
+          {
+            "node": "Save Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Draft": {
+      "main": [
+        [
+          {
+            "node": "Auto-Publish?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Auto-Publish?": {
+      "main": [
+        [
+          {
+            "node": "Publish Post",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Finish Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Publish Post": {
+      "main": [
+        [
+          {
+            "node": "Finish Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Finish Run": {
+      "main": [
+        [
+          {
+            "node": "Close Run",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "pwErrorHandler01"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "d5b0ba86-f21b-408d-ae5c-0067f1258dac"
+}

@@ -1,0 +1,187 @@
+{
+  "id": "pwErrorHandler01",
+  "name": "PW · 5 · Error Handler",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Never fail silently\nSet as the error workflow of every PW workflow. Records an alert (shown as a banner on the dashboard), closes the run as `error`, releases any half-drafted post so tomorrow can retry it, and pings an optional Slack/Discord webhook.",
+        "height": 200,
+        "width": 640,
+        "color": 4
+      },
+      "id": "e2ea0fdf-f677-452b-a2c1-dccc73825469",
+      "name": "Note 1",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        -60
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "9b0b87db-b6aa-4436-ad80-72064dbba5a3",
+      "name": "On Workflow Error",
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format Alert: n8n Error Trigger payload -> alert row + chat message.\nconst e = $json;\nconst wf = (e.workflow && e.workflow.name) || 'unknown workflow';\nconst exec = e.execution || {};\nconst err = exec.error || {};\nconst node = exec.lastNodeExecuted || (err.node && err.node.name) || 'unknown node';\nconst msg = String(err.message || 'Unknown error').slice(0, 500);\n\nlet hint = '';\nif (/ENOTFOUND|ECONNREFUSED|ETIMEDOUT|EAI_AGAIN|5\\d\\d|timeout/i.test(msg) && /sitemap|page/i.test(node)) hint = 'PlacidWay looks unreachable: will retry on the next schedule.';\nelse if (/Claude|bridge|8787/i.test(node + msg)) hint = 'LLM bridge unreachable: is `npm run bridge` running on the host?';\nelse if (/thin|markup/i.test(msg)) hint = 'Page structure changed: review the extractor.';\n\nconst prefix = /publish/i.test(wf) ? 'pub' : /engagement/i.test(wf) ? 'eng' : 'pipe';\nreturn {\n  json: {\n    run_id: `${prefix}-${exec.id}`,\n    severity: 'error',\n    source: wf,\n    message: `${wf} failed at \"${node}\": ${msg}${hint ? `: ${hint}` : ''}`,\n    details: JSON.stringify({ workflow: wf, node, execution_id: exec.id, url: exec.url || null, mode: exec.mode, stack: String(err.stack || '').slice(0, 1200) }),\n    text: `:rotating_light: *PlacidWay Autopilot*: ${wf} failed at \"${node}\"\\n${msg}${hint ? `\\n_${hint}_` : ''}${exec.url ? `\\n${exec.url}` : ''}`,\n  },\n};\n",
+        "mode": "runOnceForEachItem"
+      },
+      "id": "1f2e7af8-aebd-439a-a2f3-d893bdb1201e",
+      "name": "Format Alert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "WITH a AS (INSERT INTO alerts (severity, source, message, details) VALUES ($1, $2, $3, $4::jsonb) RETURNING id),\n          r AS (UPDATE runs SET status = 'error', error = $3, finished_at = now() WHERE run_id = $5 AND status = 'running' RETURNING id)\n     UPDATE posts SET status = 'failed', error = $3, updated_at = now()\n     WHERE run_id = $5 AND status = 'drafting' RETURNING id",
+        "options": {
+          "queryReplacement": "={{ [ $json.severity, $json.source, $json.message, $json.details, $json.run_id ] }}"
+        }
+      },
+      "id": "d28c59b7-96da-41c4-a14b-d774ea79e337",
+      "name": "Record Alert",
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        440,
+        300
+      ],
+      "credentials": {
+        "postgres": {
+          "id": "pwPostgresCred01",
+          "name": "PlacidWay App DB"
+        }
+      },
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "424dd227-26f2-419a-849d-daefa0383d7a",
+              "leftValue": "={{ !!$env.ALERT_WEBHOOK_URL }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "4d754626-6cef-4426-adfe-367848f7f6e5",
+      "name": "Webhook Configured?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.ALERT_WEBHOOK_URL }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: $('Format Alert').item.json.text, content: $('Format Alert').item.json.text }) }}"
+      },
+      "id": "90a71802-14c8-48b5-a5a5-8c8e65dd46c7",
+      "name": "Send Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        880,
+        220
+      ],
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000,
+      "onError": "continueRegularOutput"
+    }
+  ],
+  "connections": {
+    "On Workflow Error": {
+      "main": [
+        [
+          {
+            "node": "Format Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Alert": {
+      "main": [
+        [
+          {
+            "node": "Record Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record Alert": {
+      "main": [
+        [
+          {
+            "node": "Webhook Configured?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Configured?": {
+      "main": [
+        [
+          {
+            "node": "Send Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "staticData": null,
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  },
+  "tags": [],
+  "versionId": "35b330c6-a9b8-4e82-a3f1-435f68810d46"
+}

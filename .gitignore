@@ -1,0 +1,6 @@
+.env
+node_modules/
+media/*
+!media/.gitkeep
+db/seed/credentials.json
+.DS_Store

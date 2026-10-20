@@ -1,0 +1,24 @@
+server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # Dashboard API -> n8n webhook workflow. The token is injected here so it never
+  # ships to the browser; n8n rejects webhook calls without it.
+  location /api/ {
+    proxy_pass http://n8n:5678/webhook/pw/;
+    proxy_set_header x-pw-token ${PW_API_TOKEN};
+    proxy_set_header Host $host;
+    proxy_read_timeout 300s;
+  }
+
+  location /media/ {
+    alias /srv/media/;
+    add_header Cache-Control "no-cache";
+  }
+
+  location / {
+    try_files $uri /index.html;
+  }
+}

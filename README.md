@@ -36,7 +36,7 @@ npm run bridge     # in a second terminal: the LLM bridge (uses your Claude CLI 
 Everything starts in **approval mode + dry run**, so nothing touches Facebook until you set a Page token and turn dry run off. See [docs/facebook-setup.md](docs/facebook-setup.md).
 
 ```bash
-npm test           # 21 unit tests over the real Code-node sources (fixtures are real PlacidWay pages)
+npm test           # 22 unit tests over the real Code-node sources (fixtures are real PlacidWay pages)
 npm run build      # regenerate workflows/*.json from workflows/src after editing code
 tools/reimport.sh  # rebuild + re-import + re-activate in the running n8n
 npm run samples    # export generated posts to samples/README.md

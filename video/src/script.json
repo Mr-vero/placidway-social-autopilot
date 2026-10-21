@@ -30,7 +30,7 @@
       "id": "s05",
       "chapter": "Live run",
       "min": 34,
-      "text": "Let's run it live. Today is Tuesday, so the weekday rotation prefers a treatment package, and it skips any category used in the last three posts. It picked a women's health screening package and logged why. Extraction reads the page's own structured data: the body text, the listed price, the FAQ and the category. Then Claude writes the post, but not as free text. It returns a hook, two to four value lines, a call to action and hashtags, plus a verbatim quote from the source for every line it writes. Code assembles the final post, so the format is guaranteed."
+      "text": "Here's a live run. It ran on a Tuesday, so the weekday rotation preferred a treatment package, and it skipped any category used in the last three posts. It picked a women's health screening package and logged why. Extraction reads the page's own structured data: the body text, the listed price, the FAQ and the category. Then Claude writes the post, but not as free text. It returns a hook, two to four value lines, a call to action and hashtags, plus a verbatim quote from the source for every line it writes. Code assembles the final post, so the format is guaranteed."
     },
     {
       "id": "s06",

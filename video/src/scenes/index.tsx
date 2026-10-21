@@ -264,7 +264,6 @@ export const S06: React.FC<P> = ({ t }) => {
 };
 
 // ───────────────────────────── 07 Human review (dashboard)
-const REVIEW_SEGS: Seg[] = [{ from: 0.6, to: 42.6, fit: true }];
 export const S07: React.FC<P> = ({ t }) => {
   const prev = cue(t, 'On the left');
   const guard = cue(t, 'On the right');
@@ -280,7 +279,16 @@ export const S07: React.FC<P> = ({ t }) => {
           { t: guard + 14, x: 0.68, y: 0.52, s: 1.38 }, { t: edit - 4, x: 0.68, y: 0.52, s: 1.38 },
           { t: edit + 14, x: 0.55, y: 0.5, s: 1.3 }, { t: t.frames - 30, x: 0.55, y: 0.5, s: 1.3 }, { t: t.frames - 4, x: 0.5, y: 0.5, s: 1.05 },
         ]}>
-          <Clip src="captures/dash-review.mp4" segs={REVIEW_SEGS} frames={t.frames} />
+          {/* Footage locked to the narration: queue+preview → guardrail report/grounding → the blocked edit. */}
+          <Sequence from={0} durationInFrames={guard} layout="none">
+            <Clip src="captures/dash-review.mp4" segs={[{ from: 0.6, to: 8.0, fit: true }]} frames={guard} />
+          </Sequence>
+          <Sequence from={guard} durationInFrames={edit - guard} layout="none">
+            <Clip src="captures/dash-review.mp4" segs={[{ from: 8.0, to: 28.4, fit: true }]} frames={edit - guard} />
+          </Sequence>
+          <Sequence from={edit} layout="none">
+            <Clip src="captures/dash-review.mp4" segs={[{ from: 28.4, to: 42.6, fit: true }]} frames={t.frames - edit} />
+          </Sequence>
         </ZoomPan>
       </Window>
       <Note from={prev} to={guard - 4} x={1240} y={820} w={520} icon="👁" title="Exactly what Facebook will show" body="Post text, link and the branded image." accent={C.blue} />
@@ -414,7 +422,7 @@ export const S11: React.FC<P> = ({ t }) => {
     <AbsoluteFill>
       <Backdrop />
       <Title kicker="Engineering" start={4}>Built like software,<br />not a demo.</Title>
-      <div style={{ position: 'absolute', left: 120, top: 360, width: 860, height: 560, borderRadius: 18, background: '#0E0D0C', border: `1px solid ${C.line}`, boxShadow: '0 40px 100px -30px rgba(0,0,0,.8)', overflow: 'hidden', opacity: useIn(files - 10, 14) }}>
+      <div style={{ position: 'absolute', left: 120, top: 360, width: 860, height: 560, borderRadius: 18, background: '#0E0D0C', border: `1px solid ${C.line}`, boxShadow: '0 40px 100px -30px rgba(0,0,0,.8)', overflow: 'hidden', opacity: useIn(8, 16) }}>
         <div style={{ height: 40, background: '#1A1816', display: 'flex', alignItems: 'center', gap: 8, padding: '0 16px', fontFamily: mono, fontSize: 16, color: C.ink3 }}>{['#FF5F57', '#FEBC2E', '#28C840'].map((c) => <span key={c} style={{ width: 11, height: 11, borderRadius: '50%', background: c }} />)}<span style={{ marginLeft: 12 }}>~/placidWay · npm test</span></div>
         <div style={{ padding: '14px 20px', fontFamily: mono, fontSize: 16.5, lineHeight: 1.62 }}>
           {lines.slice(0, shown).slice(-16).map((l, i) => <div key={i} style={{ color: l.startsWith('✔') ? C.green : C.ink2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{l}</div>)}

@@ -4,6 +4,10 @@ import { Demo, type DemoProps } from './Demo';
 import { sceneTimings, totalFrames, type Manifest } from './timing';
 import { FPS, W, H } from './theme';
 
+async function loadJson(name: string) {
+  try { const r = await fetch(staticFile(`voice/${name}`)); return r.ok ? await r.json() : null; } catch { return null; }
+}
+
 async function loadManifest(): Promise<Manifest | null> {
   try {
     const r = await fetch(staticFile('voice/manifest.json'));
@@ -25,7 +29,7 @@ export const Root: React.FC = () => (
     durationInFrames={FPS * 60}
     defaultProps={{ captions: true, timings: [] } as DemoProps}
     calculateMetadata={async ({ props }) => {
-      const timings = sceneTimings(await loadManifest());
+      const timings = sceneTimings(await loadManifest(), await loadJson('align.json'));
       return { durationInFrames: totalFrames(timings), props: { ...props, timings } };
     }}
   />

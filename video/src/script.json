@@ -30,7 +30,8 @@
       "id": "s05",
       "chapter": "Live run",
       "min": 34,
-      "text": "Here's a live run. It ran on a Tuesday, so the weekday rotation preferred a treatment package, and it skipped any category used in the last three posts. It picked a women's health screening package and logged why. Extraction reads the page's own structured data: the body text, the listed price, the FAQ and the category. Then Claude writes the post, but not as free text. It returns a hook, two to four value lines, a call to action and hashtags, plus a verbatim quote from the source for every line it writes. Code assembles the final post, so the format is guaranteed."
+      "text": "Here's a live run. It ran on a Tuesday, so the weekday rotation preferred a treatment package, and it skipped any category used in the last three posts. It picked a women's health screening package and logged why. Extraction reads the page's own structured data: the body text, the listed price, the FAQ and the category. Then Claude writes the post, but not as free text. It returns a hook, two to four value lines, a call to action and hashtags, plus a verbatim quote from the source for every line it writes. Code assembles the final post, so the format is guaranteed.",
+      "hold": 2.0
     },
     {
       "id": "s06",
@@ -42,13 +43,15 @@
       "id": "s07",
       "chapter": "Human review",
       "min": 26,
-      "text": "The draft lands in the review dashboard. On the left is exactly what Facebook will show, with the branded image. On the right, the guardrail report, and the source text with each claim's supporting quote highlighted. If I edit the post and type something like 'guaranteed results', the same rule engine flags it as I type and blocks the approval. The server re-checks too, so the interface can't be bypassed."
+      "text": "The draft lands in the review dashboard. On the left is exactly what Facebook will show, with the branded image. On the right, the guardrail report, and the source text with each claim's supporting quote highlighted. If I edit the post and type something like 'guaranteed results', the same rule engine flags it as I type and blocks the approval. The server re-checks too, so the interface can't be bypassed.",
+      "hold": 1.0
     },
     {
       "id": "s08",
       "chapter": "Publish",
       "min": 18,
-      "text": "Approval mode is one switch; in auto mode, clean drafts publish straight away. I'll approve this one. The image is uploaded first, then attached to a feed post, the same path Facebook uses for scheduled posts. And here it is, live on the test page."
+      "text": "Approval mode is one switch; in auto mode, clean drafts publish straight away. I'll approve this one. The image is uploaded first, then attached to a feed post, the same path Facebook uses for scheduled posts. And here it is, live on the test page.",
+      "hold": 2.5
     },
     {
       "id": "s09",
@@ -72,7 +75,8 @@
       "id": "s12",
       "chapter": "Wrap-up",
       "min": 14,
-      "text": "So: one trustworthy post a day, grounded in PlacidWay's own content, with a human in the loop whenever it matters. The workflows, the README and the sample posts are all in the repository. Thanks for watching. I'm looking forward to walking you through it live."
+      "text": "So: one trustworthy post a day, grounded in PlacidWay's own content, with a human in the loop whenever it matters. The workflows, the README and the sample posts are all in the repository. Thanks for watching. I'm looking forward to walking you through it live.",
+      "hold": 3.0
     }
   ]
 }

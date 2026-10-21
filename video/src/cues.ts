@@ -7,6 +7,11 @@ export function cue(t: SceneTiming, phrase: string, offsetSec = 0) {
   const i = t.scene.text.indexOf(phrase);
   if (i < 0) throw new Error(`cue phrase not found in ${t.scene.id}: "${phrase}"`);
   const start = t.lead * FPS;
+  if (t.wordTimes) {
+    // Exact: the recorded time of the phrase's first word (from the forced alignment).
+    const wi = t.scene.text.slice(0, i).split(/\s+/).filter(Boolean).length;
+    return Math.round(start + (t.wordTimes[Math.min(wi, t.wordTimes.length - 1)] + offsetSec) * FPS);
+  }
   const speech = t.voice ? t.voice.duration * FPS : t.frames - start - 0.9 * FPS - TRANSITION;
   return Math.round(start + (i / t.scene.text.length) * speech + offsetSec * FPS);
 }

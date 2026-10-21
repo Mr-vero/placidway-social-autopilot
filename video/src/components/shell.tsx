@@ -30,9 +30,18 @@ const Captions: React.FC<{ t: SceneTiming }> = ({ t }) => {
   const startF = t.lead * FPS;
   const speechF = t.voice ? t.voice.duration * FPS : t.frames - startF - 0.9 * FPS - 14;
   const cs = chunks(t.scene.text);
-  const total = cs.reduce((n, c) => n + c.length, 0);
-  let acc = 0;
-  const spans = cs.map((c) => { const a = startF + (acc / total) * speechF; acc += c.length; return { c, a, b: startF + (acc / total) * speechF }; });
+  let spans: { c: string; a: number; b: number }[];
+  if (t.wordTimes) {
+    // Word-accurate: each card starts on its first spoken word, ends when the next card starts.
+    let wi = 0;
+    const starts = cs.map((c) => { const s = t.wordTimes![wi]; wi += c.split(/\s+/).length; return s; });
+    const endSpeech = t.voice!.duration;
+    spans = cs.map((c, k) => ({ c, a: startF + starts[k] * FPS - 3, b: startF + (k + 1 < cs.length ? starts[k + 1] : endSpeech + 0.4) * FPS - 3 }));
+  } else {
+    const total = cs.reduce((n, c) => n + c.length, 0);
+    let acc = 0;
+    spans = cs.map((c) => { const a = startF + (acc / total) * speechF; acc += c.length; return { c, a, b: startF + (acc / total) * speechF }; });
+  }
   const cur = spans.find((s) => f >= s.a && f < s.b);
   if (!cur) return null;
   const o = interpolate(f, [cur.a, cur.a + 5, cur.b - 4, cur.b], [0, 1, 1, 0.0], clamp);

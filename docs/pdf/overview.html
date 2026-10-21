@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>PlacidWay Social Autopilot: Submission Overview</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  @page { size: A4; margin: 0; }
+  :root { --ink:#221F1C; --ink2:#57514B; --ink3:#8C847C; --line:#E6DED3; --coral:#E85A4F; --red:#A9362D; --cream:#F6F2EC; --green:#2F7D5B; }
+  * { box-sizing: border-box; }
+  body { margin:0; font: 10.2pt/1.45 Inter, sans-serif; color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width:210mm; height:297mm; padding:16mm 17mm 14mm; position:relative; overflow:hidden; page-break-after:always; }
+  .page:last-child { page-break-after:auto; }
+  .band { position:absolute; left:0; top:0; width:6mm; height:100%; background:linear-gradient(var(--coral), var(--red)); }
+  .kicker { font-weight:700; font-size:8.5pt; letter-spacing:.16em; text-transform:uppercase; color:var(--coral); }
+  h1 { font: 500 30pt/1.05 Fraunces, serif; letter-spacing:-.02em; margin:6px 0 8px; }
+  h1 em { color:var(--coral); }
+  h2 { font: 500 15pt/1.2 Fraunces, serif; margin: 0 0 8px; }
+  .lead { font-size:11.5pt; color:var(--ink2); max-width:165mm; margin:0; }
+  .meta { display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 16px; }
+  .chip { border:1px solid var(--line); border-radius:999px; padding:4px 11px; font-size:9pt; font-weight:600; color:var(--ink2); background:#fff; }
+  .chip b { color:var(--ink); }
+  .links { background:var(--cream); border-radius:10px; padding:11px 14px; display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:9.6pt; margin-bottom:16px; }
+  .links dt { color:var(--ink3); font-weight:600; }
+  .links dd { margin:0; }
+  .links a { color:var(--red); text-decoration:none; font-weight:600; }
+  table { width:100%; border-collapse:collapse; font-size:9pt; }
+  th { text-align:left; font-size:7.8pt; letter-spacing:.08em; text-transform:uppercase; color:var(--ink3); padding:6px 8px; border-bottom:1.5px solid var(--ink); }
+  td { padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  td:first-child { font-weight:600; white-space:nowrap; }
+  .ok { color:var(--green); font-weight:700; }
+  .grid2 { display:grid; grid-template-columns:1.35fr 1fr; gap:14px; align-items:start; }
+  .card { border:1px solid var(--line); border-radius:10px; padding:11px 13px; background:#fff; }
+  .card h3 { margin:0 0 5px; font-size:10.4pt; }
+  .card p, .card li { margin:0; color:var(--ink2); font-size:9.1pt; }
+  .card ul { margin:0; padding-left:15px; }
+  .shot { width:100%; border-radius:8px; border:1px solid var(--line); display:block; }
+  .flow { display:flex; align-items:center; gap:5px; flex-wrap:wrap; font-size:8.6pt; font-weight:600; margin:2px 0 12px; }
+  .flow span { background:var(--cream); border:1px solid var(--line); border-radius:6px; padding:4px 8px; }
+  .flow i { color:var(--coral); font-style:normal; }
+  .foot { position:absolute; left:17mm; right:17mm; bottom:9mm; display:flex; justify-content:space-between; font-size:8pt; color:var(--ink3); border-top:1px solid var(--line); padding-top:6px; }
+  .cap { font-size:8pt; color:var(--ink3); margin-top:4px; }
+  .gallery { display:grid; grid-template-columns:repeat(3, 1fr); gap:10px 10px; margin-top:6px; }
+  .gallery figure { margin:0; }
+  .gallery img { width:100%; aspect-ratio:16/10; object-fit:cover; object-position:top center; border-radius:7px; border:1px solid var(--line); display:block; }
+  .gallery figcaption { font-size:7.8pt; color:var(--ink3); margin-top:3px; line-height:1.3; }
+  .gallery figcaption b, .cap b { color:var(--ink); }
+</style>
+</head>
+<body>
+
+<section class="page">
+  <div class="band"></div>
+  <div class="kicker">AI Automation Candidate Assessment · Irvan Fahlepi</div>
+  <h1>PlacidWay <em>Social Autopilot</em></h1>
+  <p class="lead">A production-minded n8n workflow that turns public PlacidWay content into <b>one on-brand, fact-checked Facebook post per day</b>, with two layers of guardrails, a human review dashboard, and alerting so nothing fails silently.</p>
+  <div class="meta">
+    <span class="chip"><b>n8n</b> 2.44 · 5 workflows</span><span class="chip"><b>Claude</b> writer + independent reviewer</span>
+    <span class="chip"><b>Facebook Graph API</b> v26</span><span class="chip"><b>Postgres</b> store + run log</span><span class="chip"><b>22</b> unit tests</span>
+  </div>
+  <dl class="links">
+    <dt>Repository</dt><dd><a href="https://github.com/Mr-vero/placidway-social-autopilot">github.com/Mr-vero/placidway-social-autopilot</a>: importable workflow JSON, README (setup, env vars, how to run, architecture), sample posts</dd>
+    <dt>Demo video</dt><dd>5-minute narrated recording, <b>shared via Google Drive</b> (too large for the form). It shows a live run from extraction to the published post on the test Page.</dd>
+    <dt>Facebook (test)</dt><dd><a href="https://www.facebook.com/profile.php?id=61595636279295">PW Autopilot Test</a> (the public test Page) · live posts: <a href="https://www.facebook.com/122096451345521209/posts/122096491407521209">Women's Health Screening</a> · <a href="https://www.facebook.com/122096451345521209/posts/122096451291521209">Stem Cell Therapy for Autism</a></dd>
+    <dt>Sample output</dt><dd>8 posts generated from real PlacidWay pages, with source URLs (<code>samples/README.md</code>). 2 are live on the test Page.</dd>
+  </dl>
+
+  <h2>Requirements → implementation</h2>
+  <table>
+    <tr><th>Brief</th><th>How it's done</th><th>Status</th></tr>
+    <tr><td>1 Trigger</td><td>Daily 07:00 schedule, manual run, and a dashboard “Run now”</td><td class="ok">✓ live</td></tr>
+    <tr><td>2 Extract</td><td>Public sitemaps (robots.txt-advertised, ≤ 1 req/s, 5 requests a day), then the page's own JSON-LD with OpenGraph/HTML fallback. Captures title, URL, body, image, listed price</td><td class="ok">✓ live</td></tr>
+    <tr><td>3 Select</td><td>Weekday content rotation + category cool-down. <b>UNIQUE(source_url)</b> in Postgres guarantees a URL is never posted twice</td><td class="ok">✓ live</td></tr>
+    <tr><td>4 Generate</td><td>Claude returns structured parts (hook, 2–4 lines, CTA, 3–5 hashtags) plus a verbatim source quote per line. Code assembles the post (&lt; 500 chars before the link)</td><td class="ok">✓ live</td></tr>
+    <tr><td>5 Guardrails</td><td>9 deterministic rules (no medical claims, every number and price must be in the source, quotes must exist on the page…) + an independent Claude reviewer. Failures are rewritten with feedback; after 3 tries they go to a human and never auto-publish</td><td class="ok">✓ live</td></tr>
+    <tr><td>6 Publish</td><td>Photo uploaded unpublished, then a feed post with the image (immediate or natively scheduled)</td><td class="ok">✓ live post</td></tr>
+    <tr><td>7 Review option</td><td><code>publish_mode = approval | auto</code>, switchable in the dashboard. Human edits are re-checked against the rules (server returns 422)</td><td class="ok">✓ live</td></tr>
+    <tr><td>8 Logging &amp; errors</td><td>Every run logs the item, post text, FB post ID and status. Retries + an error workflow raise dashboard alerts with a specific fix</td><td class="ok">✓ tested</td></tr>
+  </table>
+  <p class="cap" style="margin-top:8px">Stretch goals covered: variety rules · branded images (smart crop + brand bar, or a rendered card when there's no image) · review dashboard · engagement read-back · Instagram cross-post path (built; needs an IG Business account to verify).</p>
+  <div class="foot"><span>PlacidWay Social Autopilot · submission overview</span><span>1 / 3</span></div>
+</section>
+
+<section class="page">
+  <div class="band"></div>
+  <div class="kicker">How it works</div>
+  <h2 style="margin-top:6px">The daily pipeline</h2>
+  <div class="flow">
+    <span>Schedule / manual</span><i>→</i><span>Sitemaps</span><i>→</i><span>Pick 1 fresh URL</span><i>→</i><span>Claim (UNIQUE)</span><i>→</i><span>JSON-LD extract</span><i>→</i><span>Claude writes</span><i>→</i><span>Rules + Claude review</span><i>→</i><span>Brand image</span><i>→</i><span>Approve / auto</span><i>→</i><span>Facebook</span>
+  </div>
+  <img class="shot" src="canvas.jpg" alt="n8n pipeline after a successful live run">
+  <p class="cap">The main n8n workflow after a real run (all green): select · extract · generate + guardrails · image · save and publish.</p>
+
+  <div class="grid2" style="margin-top:12px">
+    <div style="display:flex; flex-direction:column; gap:10px">
+      <div class="card"><h3>Verified against the real system</h3>
+        <ul>
+          <li>End-to-end publish to the test Facebook Page, with image and permalink</li>
+          <li>Guardrails caught real issues (a number not in the source, an unsupported claim); both were rewritten and passed</li>
+          <li>Failures tested live: PlacidWay unreachable, LLM down, invalid Facebook token. Each raised an alert; failed URLs are released for retry</li>
+          <li>Dry-run mode records the exact Graph API calls before anything goes live</li>
+        </ul>
+      </div>
+      <div class="card"><h3>Key design decisions</h3>
+        <ul>
+          <li><b>The database, not workflow logic,</b> enforces "never twice"</li>
+          <li><b>Structured output + code assembly</b>, so the format is guaranteed and every claim is checkable</li>
+          <li><b>Fail closed:</b> if the reviewer is unavailable, the draft goes to a human</li>
+          <li>Code-node logic lives in real, unit-tested files; a build step generates the workflows</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <img class="shot" src="fbpost.jpg" alt="Live post on the test Facebook Page">
+      <p class="cap">A post generated from a real PlacidWay package page and published live to the test Page (“PW Autopilot Test”, not affiliated with PlacidWay). <a href="https://www.facebook.com/122096451345521209/posts/122096491407521209" style="color:var(--red);font-weight:600;text-decoration:none">View it on Facebook →</a></p>
+    </div>
+  </div>
+  <div class="foot"><span>Irvan Fahlepi · github.com/Mr-vero/placidway-social-autopilot</span><span>2 / 3</span></div>
+</section>
+
+<section class="page">
+  <div class="band"></div>
+  <div class="kicker">What was built · screens</div>
+  <h2 style="margin-top:6px">Review dashboard, n8n and outputs</h2>
+  <div class="gallery">
+    <figure><img src="d-overview.jpg"><figcaption><b>Dashboard</b>: mode switch, Run now, KPIs, weekly rotation</figcaption></figure>
+    <figure><img src="review.jpg"><figcaption><b>Review queue</b>: Facebook preview + guardrail report</figcaption></figure>
+    <figure><img src="grounding.jpg"><figcaption><b>Grounding</b>: each claim's verbatim quote highlighted in the source</figcaption></figure>
+    <figure><img src="blocked.jpg"><figcaption><b>Live checks on edits</b>: “Guaranteed results” → rule fails, approval blocked</figcaption></figure>
+    <figure><img src="d-runlog.jpg"><figcaption><b>Run log</b>: item, final post text, Facebook post ID, status</figcaption></figure>
+    <figure><img src="alerts.jpg"><figcaption><b>Alerts</b>: site down, LLM down, invalid token, each with a specific fix</figcaption></figure>
+    <figure><img src="d-posts.jpg"><figcaption><b>Posts</b>: every draft and outcome, live vs simulated</figcaption></figure>
+    <figure><img src="d-settings.jpg"><figcaption><b>Settings</b>: approval/auto, dry run, scheduling, rotation</figcaption></figure>
+    <figure><img src="workflows.jpg"><figcaption><b>n8n</b>: the five published workflows</figcaption></figure>
+  </div>
+  <div class="grid2" style="grid-template-columns:1fr 1fr 1.25fr; margin-top:10px">
+    <figure style="margin:0"><img class="shot" src="branded.jpg"><figcaption class="cap"><b>Branded image</b>: smart crop + brand bar</figcaption></figure>
+    <figure style="margin:0"><img class="shot" src="card.jpg"><figcaption class="cap"><b>No image?</b> A title card is rendered</figcaption></figure>
+    <div class="card"><h3>Next for production</h3><p>Never-expiring system-user token · idempotency check before retrying a publish · queue-mode n8n · prompt examples tuned with marketing · Slack approvals.</p></div>
+  </div>
+  <div class="foot"><span>Irvan Fahlepi · github.com/Mr-vero/placidway-social-autopilot</span><span>3 / 3</span></div>
+</section>
+
+</body>
+</html>
